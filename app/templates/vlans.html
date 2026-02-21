@@ -1,0 +1,644 @@
+{% extends "base.html" %}
+
+{% block title %}VLANs - IPAM{% endblock %}
+
+{% block extra_css %}
+<style>
+  .upload-area {
+    border: 2px dashed var(--border-medium);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
+    text-align: center;
+    transition: all var(--transition-base);
+    cursor: pointer;
+  }
+
+  .upload-area:hover {
+    border-color: var(--gray-600);
+    background: var(--gray-100);
+  }
+
+  .upload-area input[type="file"] {
+    display: none;
+  }
+
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: var(--space-4);
+    opacity: 0.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-modern">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">VLAN Management</h1>
+    <p class="page-subtitle">Manage virtual LANs and network segmentation</p>
+  </div>
+
+  {% if is_admin %}
+  <!-- Bulk Upload Section -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">📤</span>
+        Bulk Upload VLANs
+      </h2>
+    </div>
+    <div class="upload-area" onclick="document.getElementById('vlanFile').click()">
+      <div class="upload-icon">📁</div>
+      <h3 style="margin-bottom: var(--space-2);">Click to upload or drag and drop</h3>
+      <p style="color: var(--text-secondary); font-size: 13px;">
+        CSV or Excel file with VLAN data<br>
+        Required: <code>site_code</code>, <code>vlan_id</code>, <code>cidr</code><br>
+        Optional: <code>name</code>, <code>gateway</code>, <code>description</code>
+      </p>
+      <input type="file" id="vlanFile" accept=".csv,.xlsx" onchange="uploadVlanFile()">
+    </div>
+    <div id="uploadMessage" style="margin-top: var(--space-4);"></div>
+    <div id="uploadLoading"
+      style="display: none; text-align: center; padding: var(--space-4); color: var(--text-secondary);">
+      <div class="skeleton" style="height: 20px; margin: 0 auto; max-width: 150px;"></div>
+    </div>
+  </div>
+
+  <!-- Create VLAN Section -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">➕</span>
+        Create Single VLAN
+      </h2>
+    </div>
+    <div class="form-modern">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+        <div class="form-group">
+          <label class="form-label">Site Code</label>
+          <select class="form-select" id="createSiteCode">
+            <option value="DC">DC</option>
+            <option value="DR">DR</option>
+            <option value="UAT">UAT</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">VLAN ID</label>
+          <input type="number" class="form-input" id="createVlanId" placeholder="100">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input type="text" class="form-input" id="createName" placeholder="Management">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+        <div class="form-group">
+          <label class="form-label">CIDR</label>
+          <input type="text" class="form-input" id="createCidr" placeholder="10.0.0.0/24">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gateway</label>
+          <input type="text" class="form-input" id="createGateway" placeholder="10.0.0.1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" class="form-input" id="createDescription" placeholder="Management network">
+      </div>
+      <button class="btn btn-primary" onclick="createVlan()">
+        <span class="btn-icon">➕</span> Create VLAN
+      </button>
+      <div id="createMessage" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- VLANs List -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">📋</span>
+        All VLANs
+      </h2>
+    </div>
+    <div id="vlanLoading" style="text-align: center; padding: var(--space-8);">
+      <div class="skeleton" style="height: 200px;"></div>
+    </div>
+    <div style="overflow-x: auto;">
+      <table id="vlanTable" class="table-modern" style="display: none;">
+        <thead>
+          <tr>
+            <th>Site</th>
+            <th>VLAN ID</th>
+            <th>Name</th>
+            <th>CIDR</th>
+            <th>Free IPs</th>
+            <th>Gateway</th>
+            <th>Description</th>
+            {% if is_admin %}<th>Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody id="vlanTableBody"></tbody>
+      </table>
+    </div>
+    <div id="noVlans" style="display: none; text-align: center; padding: var(--space-8);">
+      <div style="font-size: 48px; margin-bottom: var(--space-4); opacity: 0.3;">📡</div>
+      <p style="color: var(--text-secondary);">No VLANs found. {% if is_admin %}Create some using the forms above.{%
+        endif %}</p>
+    </div>
+  </div>
+</div>
+
+<!-- Edit VLAN Modal -->
+<div id="editVlanModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Edit VLAN</h3>
+      <span class="close" onclick="closeEditVlanModal()">&times;</span>
+    </div>
+    <div class="form-modern">
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input type="text" class="form-input" id="editVlanName">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CIDR</label>
+        <input type="text" class="form-input" id="editVlanCidr">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gateway</label>
+        <input type="text" class="form-input" id="editVlanGateway">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="editVlanDescription" rows="3"></textarea>
+      </div>
+      <div style="display: flex; gap: var(--space-3);">
+        <button class="btn btn-primary" onclick="saveEditVlan()">💾 Save Changes</button>
+        <button class="btn btn-secondary" onclick="closeEditVlanModal()">Cancel</button>
+      </div>
+      <div id="editVlanMessage" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteVlanModal" class="modal">
+  <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3>Delete VLAN</h3>
+      <span class="close" onclick="closeDeleteVlanModal()">&times;</span>
+    </div>
+    <p id="deleteVlanText" style="margin-bottom: var(--space-6); color: var(--text-secondary);"></p>
+    <div style="display: flex; gap: var(--space-3);">
+      <button class="btn btn-danger" onclick="confirmDeleteVlan()">🗑️ Delete</button>
+      <button class="btn btn-secondary" onclick="closeDeleteVlanModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Free IPs Modal -->
+<div id="freeIpsModal" class="modal">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h3>Free IP Addresses</h3>
+      <span class="close" onclick="closeFreeIpsModal()">&times;</span>
+    </div>
+    <div id="freeIpsContent">
+      <div style="margin-bottom: var(--space-4);">
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-2);">
+          <strong>VLAN:</strong> <span id="freeIpsVlanInfo"></span>
+        </p>
+        <p style="color: var(--text-secondary);">
+          <strong>Available IPs:</strong> <span id="freeIpsCount"></span>
+        </p>
+      </div>
+      <div id="freeIpsLoading" style="text-align: center; padding: var(--space-8); display: none;">
+        <div class="skeleton" style="height: 200px;"></div>
+      </div>
+      <div id="freeIpsList"
+        style="max-height: 400px; overflow-y: auto; background: var(--bg-secondary); padding: var(--space-4); border-radius: var(--radius-lg);">
+      </div>
+      <div id="freeIpsError" style="display: none; color: var(--danger); padding: var(--space-4);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Allocate IP Modal -->
+<div id="allocateIpModal" class="modal">
+  <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3>Allocate IP Address</h3>
+      <span class="close" onclick="closeAllocateIpModal()">&times;</span>
+    </div>
+    <div class="form-modern">
+      <div class="form-group">
+        <label class="form-label">IP Address</label>
+        <input type="text" class="form-input" id="allocateIpAddress" readonly style="background: var(--bg-secondary);">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hostname</label>
+        <input type="text" class="form-input" id="allocateHostname" placeholder="server01.example.com" autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Label (Optional)</label>
+        <input type="text" class="form-input" id="allocateLabel" placeholder="Production Server">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (Optional)</label>
+        <textarea class="form-textarea" id="allocateNotes" rows="3" placeholder="Additional information..."></textarea>
+      </div>
+      <input type="hidden" id="allocateVlanId">
+      <div style="display: flex; gap: var(--space-3);">
+        <button class="btn btn-primary" onclick="confirmAllocateIp()">✓ Allocate IP</button>
+        <button class="btn btn-secondary" onclick="closeAllocateIpModal()">Cancel</button>
+      </div>
+      <div id="allocateMessage" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const siteNames = { 1: 'DC', 2: 'DR', 3: 'UAT' };
+
+  window.addEventListener('DOMContentLoaded', loadVlans);
+
+  async function loadVlans() {
+    const loading = document.getElementById('vlanLoading');
+    const table = document.getElementById('vlanTable');
+    const tbody = document.getElementById('vlanTableBody');
+    const noVlans = document.getElementById('noVlans');
+
+    loading.style.display = 'block';
+    table.style.display = 'none';
+    noVlans.style.display = 'none';
+
+    try {
+      const response = await fetch('/api/vlan/');
+      if (!response.ok) throw new Error('Failed to load VLANs');
+
+      const vlans = await response.json();
+
+      if (vlans.length === 0) {
+        noVlans.style.display = 'block';
+      } else {
+        tbody.innerHTML = vlans.map(vlan => {
+          // Calculate utilization percentage for color coding
+          const utilization = vlan.total_ips > 0 ? ((vlan.allocated_ips / vlan.total_ips) * 100) : 0;
+          let ipBadgeClass = 'badge-success';
+          if (utilization > 80) ipBadgeClass = 'badge-danger';
+          else if (utilization > 60) ipBadgeClass = 'badge-warning';
+
+          return `
+                    <tr>
+                        <td><span class="badge badge-primary">${siteNames[vlan.site_id] || vlan.site_id}</span></td>
+                        <td><strong>${vlan.vlan_id}</strong></td>
+                        <td>${vlan.name || '-'}</td>
+                        <td><code style="font-weight: 600;">${vlan.cidr}</code></td>
+                        <td>
+                            <span class="badge ${ipBadgeClass}" 
+                                  title="Click to view free IPs" 
+                                  onclick="showFreeIps(${vlan.id}, '${vlan.cidr}', ${vlan.vlan_id})"
+                                  style="cursor: pointer; transition: transform 0.2s;"
+                                  onmouseover="this.style.transform='scale(1.05)'"
+                                  onmouseout="this.style.transform='scale(1)'">
+                                ${vlan.free_ips} / ${vlan.total_ips}
+                            </span>
+                        </td>
+                        <td>${vlan.gateway ? '<code>' + vlan.gateway + '</code>' : '-'}</td>
+                        <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            ${vlan.description || '-'}
+                        </td>
+                        {% if is_admin %}
+                        <td>
+                            <div style="display: flex; gap: var(--space-2);">
+                                <button class="btn btn-sm btn-secondary" onclick='editVlan(${vlan.id}, "${(vlan.name || '').replace(/'/g, "\\'")}", "${vlan.cidr}", "${vlan.gateway || ''}", "${(vlan.description || '').replace(/'/g, "\\'")}")'>✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick='deleteVlan(${vlan.id}, "${(vlan.name || 'VLAN ' + vlan.vlan_id).replace(/'/g, "\\'")}")'>🗑️</button>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                `;
+        }).join('');
+        table.style.display = 'table';
+      }
+    } catch (error) {
+      showMessage('createMessage', '✗ Error loading VLANs: ' + error.message, 'danger');
+    } finally {
+      loading.style.display = 'none';
+    }
+  }
+
+  async function uploadVlanFile() {
+    const fileInput = document.getElementById('vlanFile');
+    const file = fileInput.files[0];
+
+    if (!file) return;
+
+    const loading = document.getElementById('uploadLoading');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    loading.style.display = 'block';
+    document.getElementById('uploadMessage').innerHTML = '';
+
+    try {
+      const response = await fetch('/api/bulk/vlan-upsert', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        let msg = `✓ Success! Created: ${result.created}, Updated: ${result.updated}`;
+        if (result.errors.length > 0) {
+          msg += `. Errors: ${result.errors.length}`;
+        }
+        showMessage('uploadMessage', msg, result.errors.length > 0 ? 'warning' : 'success');
+        fileInput.value = '';
+        await loadVlans();
+      } else {
+        showMessage('uploadMessage', '✗ ' + (result.detail || 'Upload failed'), 'danger');
+      }
+    } catch (error) {
+      showMessage('uploadMessage', '✗ Error: ' + error.message, 'danger');
+    } finally {
+      loading.style.display = 'none';
+    }
+  }
+
+  async function createVlan() {
+    const siteCode = document.getElementById('createSiteCode').value;
+    const vlanId = document.getElementById('createVlanId').value;
+    const name = document.getElementById('createName').value;
+    const cidr = document.getElementById('createCidr').value;
+    const gateway = document.getElementById('createGateway').value;
+    const description = document.getElementById('createDescription').value;
+
+    if (!vlanId || !cidr) {
+      showMessage('createMessage', '⚠️ VLAN ID and CIDR are required', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/vlan/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          site_code: siteCode,
+          vlan_id: parseInt(vlanId),
+          name: name || null,
+          cidr: cidr,
+          gateway: gateway || null,
+          description: description || null
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showMessage('createMessage', '✓ VLAN created successfully!', 'success');
+        // Clear form
+        document.getElementById('createVlanId').value = '';
+        document.getElementById('createName').value = '';
+        document.getElementById('createCidr').value = '';
+        document.getElementById('createGateway').value = '';
+        document.getElementById('createDescription').value = '';
+        await loadVlans();
+      } else {
+        showMessage('createMessage', '✗ ' + (result.detail || 'Failed to create VLAN'), 'danger');
+      }
+    } catch (error) {
+      showMessage('createMessage', '✗ Error: ' + error.message, 'danger');
+    }
+  }
+
+  let currentEditVlanId = null;
+
+  function editVlan(id, name, cidr, gateway, description) {
+    currentEditVlanId = id;
+    document.getElementById('editVlanName').value = name || '';
+    document.getElementById('editVlanCidr').value = cidr || '';
+    document.getElementById('editVlanGateway').value = gateway || '';
+    document.getElementById('editVlanDescription').value = description || '';
+    document.getElementById('editVlanModal').style.display = 'block';
+    document.getElementById('editVlanMessage').innerHTML = '';
+  }
+
+  function closeEditVlanModal() {
+    document.getElementById('editVlanModal').style.display = 'none';
+    currentEditVlanId = null;
+  }
+
+  async function saveEditVlan() {
+    if (!currentEditVlanId) return;
+
+    const name = document.getElementById('editVlanName').value.trim();
+    const cidr = document.getElementById('editVlanCidr').value.trim();
+    const gateway = document.getElementById('editVlanGateway').value.trim();
+    const description = document.getElementById('editVlanDescription').value.trim();
+
+    if (!cidr) {
+      showMessage('editVlanMessage', '⚠️ CIDR is required', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/vlan/${currentEditVlanId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name,
+          cidr: cidr,
+          gateway: gateway || null,
+          description: description || null
+        })
+      });
+
+      if (response.ok) {
+        showMessage('editVlanMessage', '✓ VLAN updated successfully!', 'success');
+        setTimeout(async () => {
+          closeEditVlanModal();
+          await loadVlans();
+        }, 1000);
+      } else {
+        const result = await response.json();
+        showMessage('editVlanMessage', '✗ ' + (result.detail || 'Failed to update VLAN'), 'danger');
+      }
+    } catch (error) {
+      showMessage('editVlanMessage', '✗ Error: ' + error.message, 'danger');
+    }
+  }
+
+  let deleteVlanId = null;
+
+  function deleteVlan(id, name) {
+    deleteVlanId = id;
+    document.getElementById('deleteVlanText').textContent = `Are you sure you want to delete VLAN "${name}"? This action cannot be undone.`;
+    document.getElementById('deleteVlanModal').style.display = 'block';
+  }
+
+  function closeDeleteVlanModal() {
+    document.getElementById('deleteVlanModal').style.display = 'none';
+    deleteVlanId = null;
+  }
+
+  async function confirmDeleteVlan() {
+    if (!deleteVlanId) return;
+
+    try {
+      const response = await fetch(`/api/vlan/${deleteVlanId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        closeDeleteVlanModal();
+        await loadVlans();
+      } else {
+        const result = await response.json();
+        alert('Failed to delete VLAN: ' + (result.detail || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('Error deleting VLAN: ' + error.message);
+    }
+  }
+
+  function showMessage(elementId, text, type) {
+    const colors = {
+      success: 'var(--success-light)',
+      danger: 'var(--danger-light)',
+      warning: 'var(--warning-light)'
+    };
+    const textColors = {
+      success: 'var(--success-dark)',
+      danger: 'var(--danger-dark)',
+      warning: 'var(--warning-dark)'
+    };
+
+    const msg = document.getElementById(elementId);
+    msg.innerHTML = text;
+    msg.style.cssText = `
+            background: ${colors[type]};
+            color: ${textColors[type]};
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-lg);
+            border: 1px solid ${textColors[type]};
+            font-weight: 500;
+            display: block;
+        `;
+  }
+  // Append these functions to vlans.html script section
+  async function showFreeIps(vlanId, cidr, vlanNumber) {
+    const modal = document.getElementById('freeIpsModal');
+    const loading = document.getElementById('freeIpsLoading');
+    const list = document.getElementById('freeIpsList');
+    const error = document.getElementById('freeIpsError');
+    const vlanInfo = document.getElementById('freeIpsVlanInfo');
+    const countDisplay = document.getElementById('freeIpsCount');
+
+    modal.style.display = 'block';
+    loading.style.display = 'block';
+    list.innerHTML = '';
+    error.style.display = 'none';
+    vlanInfo.textContent = `VLAN ${vlanNumber} (${cidr})`;
+    countDisplay.textContent = 'Loading...';
+
+    try {
+      const response = await fetch(`/api/vlan/${vlanId}/free-ips`);
+      if (!response.ok) throw new Error('Failed to fetch free IPs');
+
+      const data = await response.json();
+      loading.style.display = 'none';
+      countDisplay.textContent = `${data.free} free out of ${data.total} total`;
+
+      if (data.free_ips.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: var(--space-4);">No free IPs available</p>';
+      } else {
+        let html = '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2);">';
+        data.free_ips.forEach(ip => {
+          html += `<div style="padding: var(--space-2); background: var(--bg-primary); border-radius: var(--radius-md); font-family: monospace; font-size: 13px; text-align: center; cursor: pointer; transition: all 0.2s;" 
+                        onclick="openAllocateIpModal('${ip}', ${vlanId})" 
+                        onmouseover="this.style.background='var(--gray-800)'; this.style.color='white'; this.style.transform='scale(1.05)'" 
+                        onmouseout="this.style.background='var(--bg-primary)'; this.style.color='var(--text-primary)'; this.style.transform='scale(1)'"
+                        title="Click to allocate this IP">${ip}</div>`;
+        });
+        html += '</div>';
+        if (data.free_ips.length < data.free) {
+          html += `<p style="margin-top: var(--space-4); color: var(--text-secondary); font-size: 13px; text-align: center;">Showing first ${data.free_ips.length} of ${data.free} free IPs. Click any IP to allocate it.</p>`;
+        }
+        list.innerHTML = html;
+      }
+    } catch (err) {
+      loading.style.display = 'none';
+      error.style.display = 'block';
+      error.textContent = '✗ Error: ' + err.message;
+    }
+  }
+
+  function closeFreeIpsModal() {
+    document.getElementById('freeIpsModal').style.display = 'none';
+  }
+
+  function openAllocateIpModal(ipAddress, vlanId) {
+    document.getElementById('allocateIpAddress').value = ipAddress;
+    document.getElementById('allocateVlanId').value = vlanId;
+    document.getElementById('allocateHostname').value = '';
+    document.getElementById('allocateLabel').value = '';
+    document.getElementById('allocateNotes').value = '';
+    document.getElementById('allocateMessage').innerHTML = '';
+    document.getElementById('allocateIpModal').style.display = 'block';
+    // Focus on hostname input
+    setTimeout(() => document.getElementById('allocateHostname').focus(), 100);
+  }
+
+  function closeAllocateIpModal() {
+    document.getElementById('allocateIpModal').style.display = 'none';
+  }
+
+  async function confirmAllocateIp() {
+    const ipAddress = document.getElementById('allocateIpAddress').value;
+    const hostname = document.getElementById('allocateHostname').value.trim();
+    const label = document.getElementById('allocateLabel').value.trim();
+    const notes = document.getElementById('allocateNotes').value.trim();
+    const vlanId = document.getElementById('allocateVlanId').value;
+
+    if (!hostname) {
+      showMessage('allocateMessage', '⚠️ Hostname is required', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/ip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ip: ipAddress,
+          hostname: hostname,
+          label: label || null,
+          notes: notes || null,
+          status: 'allocated',
+          vlan_id: parseInt(vlanId)
+        })
+      });
+
+      if (response.ok) {
+        showMessage('allocateMessage', '✓ IP allocated successfully!', 'success');
+        setTimeout(() => {
+          closeAllocateIpModal();
+          closeFreeIpsModal();
+          loadVlans(); // Refresh VLAN list to update free IP counts
+        }, 1000);
+      } else {
+        const result = await response.json();
+        showMessage('allocateMessage', '✗ ' + (result.detail || 'Failed to allocate IP'), 'danger');
+      }
+    } catch (error) {
+      showMessage('allocateMessage', '✗ Error: ' + error.message, 'danger');
+    }
+  }
+
+</script>
+{% endblock %}

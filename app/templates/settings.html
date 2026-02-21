@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - IPAM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-nav {
+        display: flex;
+        gap: var(--space-4);
+        border-bottom: 2px solid var(--border-light);
+        margin-bottom: var(--space-6);
+        overflow-x: auto;
+    }
+
+    .settings-tab {
+        padding: var(--space-3) var(--space-4);
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--text-secondary);
+        border-bottom: 3px solid transparent;
+        transition: all var(--transition-base);
+        margin-bottom: -2px;
+    }
+
+    .settings-tab:hover {
+        color: var(--text-primary);
+        background: var(--bg-tertiary);
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .settings-tab.active {
+        color: var(--text-primary);
+        border-bottom-color: var(--gray-800);
+    }
+
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .key-value-list {
+        display: grid;
+        gap: var(--space-4);
+    }
+
+    .log-details pre {
+        background: var(--bg-tertiary);
+        padding: var(--space-3);
+        border-radius: var(--radius-md);
+        margin: var(--space-2) 0 0 0;
+        font-size: 12px;
+        white-space: pre-wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-modern">
+    <div class="page-header">
+        <h1 class="page-title">System Settings</h1>
+        <p class="page-subtitle">Manage users, authentication, and audit logs</p>
+    </div>
+
+    <!-- Settings Navigation -->
+    <div class="settings-nav">
+        <div class="settings-tab active" onclick="switchTab('users')">
+            Manage Users
+        </div>
+        <div class="settings-tab" onclick="switchTab('application')">
+            Application
+        </div>
+        <div class="settings-tab" onclick="switchTab('oidc')">
+            OIDC / SSO
+        </div>
+        <div class="settings-tab" onclick="switchTab('audit')">
+            Audit Logs
+        </div>
+    </div>
+
+    <!-- User Management Tab -->
+    <div id="users" class="tab-content active">
+        <div class="card">
+            <div class="card-header" style="justify-content: space-between;">
+                <h2 class="card-title">User Management</h2>
+                <button class="btn btn-primary" onclick="openCreateUserModal()">
+                    ➕ Create User
+                </button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center">Loading users...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Settings Tab -->
+    <div id="application" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Application Configuration</h2>
+            </div>
+            <div class="form-modern">
+                <div class="form-group">
+                    <label class="form-label">Application URL</label>
+                    <input type="text" class="form-input" id="appUrl"
+                        placeholder="https://ipam.example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">SSL Certificate (PEM format)</label>
+                    <textarea class="form-input" id="appSslCert" rows="6" style="font-family: monospace;" placeholder="-----BEGIN CERTIFICATE-----\n..."></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="saveAppSettings()">
+                    💾 Save Configuration
+                </button>
+                <div id="appMessage" style="margin-top: var(--space-4);"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OIDC Settings Tab -->
+    <div id="oidc" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">OIDC Configuration</h2>
+            </div>
+            <div class="form-modern">
+                <div class="alert-info" style="margin-bottom: var(--space-4); padding: var(--space-3); background-color: var(--bg-tertiary); border-left: 4px solid var(--primary-color); border-radius: var(--radius-md);">
+                    <strong>Configuration Instructions:</strong> Register this application with your Identity Provider (IdP) using the <strong>Redirect URI</strong> specified below. Ensure your IdP supports OpenID Connect discovery and provides the necessary Client ID and Client Secret.
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Discovery URL</label>
+                    <input type="text" class="form-input" id="oidcDiscovery"
+                        placeholder="https://oidc.example.com/.well-known/openid-configuration">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Client ID</label>
+                    <input type="text" class="form-input" id="oidcClientId">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Client Secret</label>
+                    <input type="password" class="form-input" id="oidcClientSecret">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Redirect URI</label>
+                    <input type="text" class="form-input" id="oidcRedirect"
+                        placeholder="https://ipam.example.com/auth/callback">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Scopes</label>
+                    <input type="text" class="form-input" id="oidcScopes" value="openid profile email">
+                </div>
+                <button class="btn btn-primary" onclick="saveOidcSettings()">
+                    💾 Save Configuration
+                </button>
+                <div id="oidcMessage" style="margin-top: var(--space-4);"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Logs Tab -->
+    <div id="audit" class="tab-content">
+        <div class="card">
+            <div class="card-header" style="display: block;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-4);">
+                    <h2 class="card-title">Audit Log Explorer</h2>
+                    <div style="display: flex; gap: var(--space-2);">
+                        <button class="btn btn-secondary" onclick="exportLogs('csv')">
+                            📊 Export CSV
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportLogs('json')">
+                            📝 Export JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); background: var(--bg-secondary); padding: var(--space-4); border-radius: var(--radius-lg);">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label" style="font-size: 12px;">Actor</label>
+                        <input type="text" class="form-input" id="filterActor" placeholder="Username">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label" style="font-size: 12px;">Action</label>
+                        <select class="form-select" id="filterAction">
+                            <option value="">All Actions</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label" style="font-size: 12px;">Start Date</label>
+                        <input type="date" class="form-input" id="filterStartDate">
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-primary" onclick="loadAuditLogs()" style="width: 100%;">Apply</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="table-modern">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Actor</th>
+                            <th>Action</th>
+                            <th>Entity</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center">Loading logs...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div id="createUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Create User</h3>
+            <span class="close" onclick="closeCreateUserModal()">&times;</span>
+        </div>
+        <div class="form-modern">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input" id="createUsername">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-input" id="createPassword">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-input" id="createFullName">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="createEmail">
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: var(--space-2);">
+                <input type="checkbox" id="createIsAdmin">
+                <label for="createIsAdmin">Grant Admin Privileges</label>
+            </div>
+            <button class="btn btn-primary" onclick="createUser()">Create User</button>
+            <div id="createUserMessage" style="margin-top: var(--space-4);"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab Switching
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.settings-tab').forEach(el => el.classList.remove('active'));
+
+        document.getElementById(tabId).classList.add('active');
+        document.querySelector(`.settings-tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+
+        // Load data if needed
+        if (tabId === 'users') loadUsers();
+        if (tabId === 'application') loadAppSettings();
+        if (tabId === 'oidc') loadOidcSettings();
+        if (tabId === 'audit') loadAuditLogs();
+    }
+
+    // --- User Management ---
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/users/');
+            const users = await response.json();
+            const tbody = document.getElementById('userTableBody');
+
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td><strong>${user.username}</strong></td>
+                    <td>${user.full_name || '-'}</td>
+                    <td>${user.email || '-'}</td>
+                    <td><span class="badge ${user.is_admin ? 'badge-primary' : 'badge-secondary'}">${user.is_admin ? 'Admin' : 'User'}</span></td>
+                    <td><span class="badge ${user.is_active ? 'badge-success' : 'badge-danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${user.username}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function openCreateUserModal() {
+        document.getElementById('createUserModal').style.display = 'block';
+    }
+
+    function closeCreateUserModal() {
+        document.getElementById('createUserModal').style.display = 'none';
+        document.getElementById('createUserMessage').innerHTML = '';
+    }
+
+    async function createUser() {
+        const username = document.getElementById('createUsername').value;
+        const password = document.getElementById('createPassword').value;
+        const fullName = document.getElementById('createFullName').value;
+        const email = document.getElementById('createEmail').value;
+        const isAdmin = document.getElementById('createIsAdmin').checked;
+
+        try {
+            const response = await fetch('/api/users/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username,
+                    password,
+                    full_name: fullName,
+                    email,
+                    is_admin: isAdmin
+                })
+            });
+
+            if (response.ok) {
+                closeCreateUserModal();
+                loadUsers();
+            } else {
+                const data = await response.json();
+                document.getElementById('createUserMessage').innerText = data.detail || 'Error creating user';
+            }
+        } catch (error) {
+            document.getElementById('createUserMessage').innerText = error.message;
+        }
+    }
+
+    async function deleteUser(id, username) {
+        if (!confirm(`Are you sure you want to delete user ${username}?`)) return;
+
+        try {
+            await fetch(`/api/users/${id}`, { method: 'DELETE' });
+            loadUsers();
+        } catch (error) {
+            alert('Error deleting user');
+        }
+    }
+
+    // --- Application Settings ---
+    async function loadAppSettings() {
+        try {
+            const response = await fetch('/api/settings/application');
+            const data = await response.json();
+
+            document.getElementById('appUrl').value = data.app_url || '';
+            document.getElementById('appSslCert').value = data.ssl_cert || '';
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function saveAppSettings() {
+        const msg = document.getElementById('appMessage');
+        msg.innerHTML = 'Saving...';
+
+        try {
+            const response = await fetch('/api/settings/application', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    app_url: document.getElementById('appUrl').value,
+                    ssl_cert: document.getElementById('appSslCert').value
+                })
+            });
+
+            if (response.ok) {
+                msg.innerHTML = '<span style="color: var(--success);">✓ Saved successfully</span>';
+            } else {
+                msg.innerHTML = '<span style="color: var(--danger);">Error saving settings</span>';
+            }
+        } catch (error) {
+            msg.innerHTML = `<span style="color: var(--danger);">${error.message}</span>`;
+        }
+    }
+
+    // --- OIDC Settings ---
+    async function loadOidcSettings() {
+        try {
+            const response = await fetch('/api/settings/oidc');
+            const data = await response.json();
+
+            document.getElementById('oidcDiscovery').value = data.discovery_url || '';
+            document.getElementById('oidcClientId').value = data.client_id || '';
+            document.getElementById('oidcRedirect').value = data.redirect_uri || '';
+            document.getElementById('oidcScopes').value = data.scopes || 'openid profile email';
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function saveOidcSettings() {
+        const msg = document.getElementById('oidcMessage');
+        msg.innerHTML = 'Saving...';
+
+        try {
+            const response = await fetch('/api/settings/oidc', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    enabled: true,
+                    discovery_url: document.getElementById('oidcDiscovery').value,
+                    client_id: document.getElementById('oidcClientId').value,
+                    client_secret: document.getElementById('oidcClientSecret').value,
+                    redirect_uri: document.getElementById('oidcRedirect').value,
+                    scopes: document.getElementById('oidcScopes').value
+                })
+            });
+
+            if (response.ok) {
+                msg.innerHTML = '<span style="color: var(--success);">✓ Saved successfully</span>';
+            } else {
+                msg.innerHTML = '<span style="color: var(--danger);">Error saving settings</span>';
+            }
+        } catch (error) {
+            msg.innerHTML = `<span style="color: var(--danger);">${error.message}</span>`;
+        }
+    }
+
+    // --- Audit Logs ---
+    async function loadAuditLogs() {
+        const actor = document.getElementById('filterActor').value;
+        const action = document.getElementById('filterAction').value;
+        const startDate = document.getElementById('filterStartDate').value;
+
+        const params = new URLSearchParams();
+        if (actor) params.append('actor', actor);
+        if (action) params.append('action', action);
+        if (startDate) params.append('start_date', startDate);
+
+        try {
+            const response = await fetch(`/api/audit/logs?${params.toString()}`);
+            const data = await response.json();
+            const tbody = document.getElementById('auditTableBody');
+
+            tbody.innerHTML = data.logs.map(log => {
+                // For delete operations, show old_value; for create/update, show new_value
+                const isDelete = log.action.includes('DELETE');
+                const changeData = isDelete ? log.old_value : log.new_value;
+                const changeLabel = isDelete ? 'Deleted Data' : 'Change Details';
+
+                return `
+                <tr>
+                    <td style="white-space: nowrap; font-size: 13px;">${new Date(log.event_time).toLocaleString()}</td>
+                    <td>${log.actor}</td>
+                    <td><span class="badge badge-secondary">${log.action}</span></td>
+                    <td>${log.entity} #${log.entity_id || '-'}</td>
+                    <td>
+                        <div class="log-details">
+                            <details>
+                                <summary style="cursor: pointer; color: var(--text-primary);">${changeLabel}</summary>
+                                <pre>${JSON.stringify(changeData, null, 2)}</pre>
+                            </details>
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            // Load actions for filter if empty
+            const actionSelect = document.getElementById('filterAction');
+            if (actionSelect.options.length <= 1) {
+                const actionResp = await fetch('/api/audit/actions');
+                const actions = await actionResp.json();
+                actions.actions.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a;
+                    opt.text = a;
+                    actionSelect.appendChild(opt);
+                });
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function exportLogs(format) {
+        const actor = document.getElementById('filterActor').value;
+        const action = document.getElementById('filterAction').value;
+        const startDate = document.getElementById('filterStartDate').value;
+
+        const params = new URLSearchParams();
+        if (actor) params.append('actor', actor);
+        if (action) params.append('action', action);
+        if (startDate) params.append('start_date', startDate);
+
+        window.location.href = `/api/audit/export/${format}?${params.toString()}`;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        loadUsers();
+    });
+</script>
+{% endblock %}

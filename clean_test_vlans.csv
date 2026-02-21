@@ -1,0 +1,5 @@
+site_code,vlan_id,cidr,name,gateway,description
+DC,100,10.100.1.0/24,Management,10.100.1.1,Management network for DC
+DC,200,10.100.2.0/24,Production,10.100.2.1,Production servers
+DR,100,10.200.1.0/24,Management,10.200.1.1,Management network for DR
+DR,300,10.200.3.0/24,Development,10.200.3.1,Development environment

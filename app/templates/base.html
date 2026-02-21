@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IP Address Management - Modern IPAM Solution">
+    <title>{% block title %}IPAM{% endblock %}</title>
+
+    <!-- Preconnect to Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/modern.css">
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    {% block extra_css %}{% endblock %}
+
+    <!-- Dark Mode Script (load early to prevent flash) -->
+    <script src="/static/js/dark-mode.js"></script>
+</head>
+
+<body>
+    {% block navigation %}
+    <div class="app-layout">
+        <!-- Icon Sidebar -->
+        <aside class="icon-sidebar">
+            <div class="icon-sidebar-logo">
+                <img src="/static/images/logo.png" alt="IPAM" onerror="this.outerHTML='✦'">
+            </div>
+            <nav class="icon-sidebar-nav">
+                <a href="/" class="icon-sidebar-link {% if request.path == '/' %}active{% endif %}" title="Dashboard">
+                    🏠
+                    <span class="tooltip">Dashboard</span>
+                </a>
+                <a href="/search" class="icon-sidebar-link {% if request.path == '/search' %}active{% endif %}"
+                    title="Search">
+                    🔍
+                    <span class="tooltip">Search</span>
+                </a>
+                <a href="/vlans" class="icon-sidebar-link {% if request.path == '/vlans' %}active{% endif %}"
+                    title="VLANs">
+                    📡
+                    <span class="tooltip">VLANs</span>
+                </a>
+                {% if is_admin %}
+                <a href="/bulk" class="icon-sidebar-link {% if request.path == '/bulk' %}active{% endif %}"
+                    title="Bulk Import">
+                    📥
+                    <span class="tooltip">Bulk Import</span>
+                </a>
+                <a href="/docs" class="icon-sidebar-link" title="API Docs">
+                    📖
+                    <span class="tooltip">API Docs</span>
+                </a>
+                {% endif %}
+            </nav>
+            <div class="icon-sidebar-bottom">
+                {% if is_admin %}
+                <a href="/settings" class="icon-sidebar-link {% if request.path == '/settings' %}active{% endif %}"
+                    title="Settings">
+                    ⚙️
+                    <span class="tooltip">Settings</span>
+                </a>
+                {% endif %}
+                <button id="themeToggle" class="icon-sidebar-link" onclick="toggleTheme()" aria-label="Toggle theme"
+                    title="Toggle theme" style="border: none; cursor: pointer; background: none;">
+                    🌙
+                    <span class="tooltip">Toggle Theme</span>
+                </button>
+                <a href="/auth/logout" class="icon-sidebar-link" title="Logout">
+                    🚪
+                    <span class="tooltip">Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            {% endblock %}
+
+            <!-- Page Content -->
+            <main>
+                {% block content %}{% endblock %}
+            </main>
+
+            {% block layout_close %}
+        </div><!-- .main-content -->
+    </div><!-- .app-layout -->
+    {% endblock %}
+
+    <!-- Scripts -->
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

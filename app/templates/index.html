@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+
+{% block title %}Search - IPAM{% endblock %}
+
+{% block extra_css %}
+<style>
+  .search-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .search-form {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .search-form .form-input,
+  .search-form .form-select {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .btn-icon {
+    font-size: 18px;
+    margin-right: var(--space-2);
+  }
+
+  .table-actions {
+    display: flex;
+    gap: var(--space-2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-modern">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">IP Address Search</h1>
+    <p class="page-subtitle">Search and manage your IP address inventory</p>
+  </div>
+
+  <!-- Add IP Form -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">➕</span>
+        Add New IP Address
+      </h2>
+    </div>
+    <div class="form-modern">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+        <div class="form-group">
+          <label class="form-label">IP Address</label>
+          <input type="text" class="form-input" id="newIp" placeholder="e.g., 100.121.1.10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hostname</label>
+          <input type="text" class="form-input" id="newHostname" placeholder="e.g., web-server-01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="newStatus">
+            <option value="allocated">Allocated</option>
+            <option value="reserved">Reserved</option>
+            <option value="free">Free</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (Optional)</label>
+        <input type="text" class="form-input" id="newNotes" placeholder="Add any notes">
+      </div>
+      <button class="btn btn-primary" onclick="addIP()">
+        <span class="btn-icon">➕</span> Add IP Address
+      </button>
+      <div id="addMessage" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+
+  <!-- Search Form -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">🔍</span>
+        Search IP Addresses
+      </h2>
+    </div>
+    <form method="get" class="search-form">
+      <input name="q" value="{{ q }}" class="form-input" placeholder="Search IP or hostname..." />
+      <select name="site" class="form-select">
+        <option value="" {% if not site %}selected{% endif %}>All Sites</option>
+        <option value="DC" {% if site=='DC' %}selected{% endif %}>DC</option>
+        <option value="DR" {% if site=='DR' %}selected{% endif %}>DR</option>
+        <option value="UAT" {% if site=='UAT' %}selected{% endif %}>UAT</option>
+      </select>
+      <button type="submit" class="btn btn-primary">
+        <span class="btn-icon">🔍</span> Search
+      </button>
+    </form>
+  </div>
+
+  <!-- Results Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">📋</span>
+        Search Results
+      </h2>
+    </div>
+    <div style="overflow-x: auto;">
+      <table class="table-modern">
+        <thead>
+          <tr>
+            <th>IP Address</th>
+            <th>Site</th>
+            <th>VLAN</th>
+            <th>Status</th>
+            <th>Hostname</th>
+            <th>Notes</th>
+            {% if is_admin %}<th>Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% if rows %}
+          {% for ip_obj, assign, site, vlan in rows %}
+          <tr>
+            <td><code style="font-weight: 600;">{{ ip_obj.ip }}</code></td>
+            <td><span class="badge badge-primary">{{ site.code }}</span></td>
+            <td>{{ vlan.name if vlan else '-' }}</td>
+            <td>
+              <span
+                class="badge badge-{{ 'success' if ip_obj.status == 'allocated' else ('warning' if ip_obj.status == 'reserved' else 'info') }}">
+                {{ ip_obj.status }}
+              </span>
+            </td>
+            <td>{{ assign.hostname if assign else '' }}</td>
+            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ assign.notes if assign else '' }}
+            </td>
+            {% if is_admin %}
+            <td>
+              <div class="table-actions">
+                <button class="btn btn-sm btn-secondary"
+                  onclick="editIP({{ ip_obj.id }}, '{{ ip_obj.ip }}', '{{ assign.hostname if assign else '' }}', '{{ assign.notes if assign else '' }}', '{{ ip_obj.status }}')">
+                  ✏️ Edit
+                </button>
+                <button class="btn btn-sm btn-danger"
+                  onclick="deleteIP({{ ip_obj.id }}, '{{ ip_obj.ip }}', '{{ assign.hostname if assign else 'No hostname' }}')">
+                  🗑️ Delete
+                </button>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="{% if is_admin %}7{% else %}6{% endif %}" style="text-align: center; padding: var(--space-8);">
+              <div style="font-size: 48px; margin-bottom: var(--space-4); opacity: 0.3;">🔍</div>
+              <p style="color: var(--text-secondary);">No results found. Try a different search query.</p>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Edit IP Modal -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Edit IP Address</h3>
+      <span class="close" onclick="closeEditModal()">&times;</span>
+    </div>
+    <div class="form-modern">
+      <div class="form-group">
+        <label class="form-label">IP Address</label>
+        <input type="text" class="form-input" id="editIp" readonly style="opacity: 0.7; cursor: not-allowed;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hostname</label>
+        <input type="text" class="form-input" id="editHostname">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="editStatus">
+          <option value="allocated">Allocated</option>
+          <option value="reserved">Reserved</option>
+          <option value="free">Free</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="editNotes" rows="3"></textarea>
+      </div>
+      <div style="display: flex; gap: var(--space-3);">
+        <button class="btn btn-primary" onclick="saveIP()">💾 Save Changes</button>
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+      </div>
+      <div id="editMessage" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete IP Confirmation Modal -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content" style="max-width: 450px;">
+    <div class="modal-header">
+      <h3>Delete IP Address</h3>
+      <span class="close" onclick="closeDeleteModal()">&times;</span>
+    </div>
+    <div>
+      <p id="deleteText" style="margin-bottom: var(--space-6); color: var(--text-secondary);"></p>
+      <div style="display: flex; gap: var(--space-3);">
+        <button class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete</button>
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let currentIpId = null;
+
+  async function addIP() {
+    const ip = document.getElementById('newIp').value.trim();
+    const hostname = document.getElementById('newHostname').value.trim();
+    const notes = document.getElementById('newNotes').value.trim();
+    const status = document.getElementById('newStatus').value;
+
+    if (!ip) {
+      showMessage('addMessage', '⚠️ IP address is required', 'danger');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/ip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ip: ip,
+          hostname: hostname || null,
+          notes: notes || null,
+          status: status
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showMessage('addMessage', '✓ IP address added successfully!', 'success');
+        document.getElementById('newIp').value = '';
+        document.getElementById('newHostname').value = '';
+        document.getElementById('newNotes').value = '';
+        document.getElementById('newStatus').value = 'allocated';
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showMessage('addMessage', '✗ ' + (result.detail || 'Failed to add IP address'), 'danger');
+      }
+    } catch (error) {
+      showMessage('addMessage', '✗ Error: ' + error.message, 'danger');
+    }
+  }
+
+  function editIP(ipId, ip, hostname, notes, status) {
+    currentIpId = ipId;
+    document.getElementById('editIp').value = ip;
+    document.getElementById('editHostname').value = hostname;
+    document.getElementById('editNotes').value = notes;
+    document.getElementById('editStatus').value = status;
+    document.getElementById('editModal').style.display = 'block';
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    currentIpId = null;
+    document.getElementById('editMessage').innerHTML = '';
+  }
+
+  async function saveIP() {
+    if (!currentIpId) return;
+
+    const hostname = document.getElementById('editHostname').value.trim();
+    const notes = document.getElementById('editNotes').value.trim();
+    const status = document.getElementById('editStatus').value;
+
+    try {
+      const response = await fetch(`/api/ip/${currentIpId}/hostname`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hostname: hostname || null,
+          notes: notes || null,
+          status: status
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showMessage('editMessage', '✓ IP updated successfully!', 'success');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showMessage('editMessage', '✗ ' + (result.detail || 'Failed to update IP'), 'danger');
+      }
+    } catch (error) {
+      showMessage('editMessage', '✗ Error: ' + error.message, 'danger');
+    }
+  }
+
+  function showMessage(elementId, text, type) {
+    const colors = {
+      success: 'var(--success-light)',
+      danger: 'var(--danger-light)',
+      warning: 'var(--warning-light)'
+    };
+    const textColors = {
+      success: 'var(--success-dark)',
+      danger: 'var(--danger-dark)',
+      warning: 'var(--warning-dark)'
+    };
+
+    const msg = document.getElementById(elementId);
+    msg.innerHTML = text;
+    msg.style.cssText = `
+            background: ${colors[type]};
+            color: ${textColors[type]};
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-lg);
+            border: 1px solid ${textColors[type]};
+            font-weight: 500;
+        `;
+  }
+
+  // Close modal when clicking outside
+  window.onclick = function (event) {
+    const modal = document.getElementById('editModal');
+    if (event.target == modal) {
+      closeEditModal();
+    }
+  }
+
+  let deleteIpId = null;
+
+  function deleteIP(id, ip, hostname) {
+    deleteIpId = id;
+    document.getElementById('deleteText').textContent =
+      `Are you sure you want to delete IP ${ip} (${hostname})? This action cannot be undone.`;
+    document.getElementById('deleteModal').style.display = 'block';
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    deleteIpId = null;
+  }
+
+  async function confirmDelete() {
+    if (!deleteIpId) return;
+
+    try {
+      const response = await fetch(`/api/ip/${deleteIpId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        closeDeleteModal();
+        window.location.reload();
+      } else {
+        const result = await response.json();
+        alert('Failed to delete IP: ' + (result.detail || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('Error deleting IP: ' + error.message);
+    }
+  }
+
+</script>
+{% endblock %}
