@@ -121,17 +121,33 @@
             <div class="form-modern">
                 <div class="form-group">
                     <label class="form-label">Application URL</label>
-                    <input type="text" class="form-input" id="appUrl"
-                        placeholder="https://ipam.example.com">
+                    <input type="text" class="form-input" id="appUrl" placeholder="https://ipam.example.com">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">SSL Certificate (PEM format)</label>
-                    <textarea class="form-input" id="appSslCert" rows="6" style="font-family: monospace;" placeholder="-----BEGIN CERTIFICATE-----\n..."></textarea>
+                <div class="form-group" style="display: flex; gap: var(--space-4);">
+                    <div style="flex: 1;">
+                        <label class="form-label">SSL Certificate (cert.pem)</label>
+                        <input type="file" class="form-input" id="appSslCertFile" accept=".pem,.crt,.cer">
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="form-label">SSL Private Key (key.pem)</label>
+                        <input type="file" class="form-input" id="appSslKeyFile" accept=".pem,.key">
+                    </div>
                 </div>
                 <button class="btn btn-primary" onclick="saveAppSettings()">
                     💾 Save Configuration
                 </button>
                 <div id="appMessage" style="margin-top: var(--space-4);"></div>
+
+                <hr style="margin: var(--space-6) 0; border: none; border-top: 1px solid var(--border-light);">
+
+                <h3 class="card-title" style="font-size: 1.1rem; margin-bottom: var(--space-3);">System Update</h3>
+                <p style="color: var(--text-secondary); margin-bottom: var(--space-4); font-size: 0.9rem;">
+                    Fetch the latest code from GitHub and restart the application stack. Your data will not be lost.
+                </p>
+                <button class="btn btn-secondary" id="updateAppBtn" onclick="triggerAppUpdate()">
+                    🔄 Update Application
+                </button>
+                <div id="updateMessage" style="margin-top: var(--space-3); font-size: 0.9rem;"></div>
             </div>
         </div>
     </div>
@@ -143,8 +159,11 @@
                 <h2 class="card-title">OIDC Configuration</h2>
             </div>
             <div class="form-modern">
-                <div class="alert-info" style="margin-bottom: var(--space-4); padding: var(--space-3); background-color: var(--bg-tertiary); border-left: 4px solid var(--primary-color); border-radius: var(--radius-md);">
-                    <strong>Configuration Instructions:</strong> Register this application with your Identity Provider (IdP) using the <strong>Redirect URI</strong> specified below. Ensure your IdP supports OpenID Connect discovery and provides the necessary Client ID and Client Secret.
+                <div class="alert-info"
+                    style="margin-bottom: var(--space-4); padding: var(--space-3); background-color: var(--bg-tertiary); border-left: 4px solid var(--primary-color); border-radius: var(--radius-md);">
+                    <strong>Configuration Instructions:</strong> Register this application with your Identity Provider
+                    (IdP) using the <strong>Redirect URI</strong> specified below. Ensure your IdP supports OpenID
+                    Connect discovery and provides the necessary Client ID and Client Secret.
                 </div>
                 <div class="form-group">
                     <label class="form-label">Discovery URL</label>
@@ -373,7 +392,6 @@
             const data = await response.json();
 
             document.getElementById('appUrl').value = data.app_url || '';
-            document.getElementById('appSslCert').value = data.ssl_cert || '';
         } catch (error) {
             console.error(error);
         }
@@ -383,14 +401,19 @@
         const msg = document.getElementById('appMessage');
         msg.innerHTML = 'Saving...';
 
+        const formData = new FormData();
+        formData.append('app_url', document.getElementById('appUrl').value);
+
+        const certFile = document.getElementById('appSslCertFile').files[0];
+        if (certFile) formData.append('cert_file', certFile);
+
+        const keyFile = document.getElementById('appSslKeyFile').files[0];
+        if (keyFile) formData.append('key_file', keyFile);
+
         try {
             const response = await fetch('/api/settings/application', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    app_url: document.getElementById('appUrl').value,
-                    ssl_cert: document.getElementById('appSslCert').value
-                })
+                body: formData
             });
 
             if (response.ok) {
@@ -400,6 +423,41 @@
             }
         } catch (error) {
             msg.innerHTML = `<span style="color: var(--danger);">${error.message}</span>`;
+        }
+    }
+
+    async function triggerAppUpdate() {
+        if (!confirm('Are you sure you want to update the application? This will pull the latest code and restart the server.')) {
+            return;
+        }
+
+        const btn = document.getElementById('updateAppBtn');
+        const msg = document.getElementById('updateMessage');
+
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Updating...';
+        msg.innerHTML = '<span style="color: var(--text-secondary);">Initiating update sequence. The application will be unavailable for a brief moment. Please wait...</span>';
+
+        try {
+            const response = await fetch('/api/settings/update_app', {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                msg.innerHTML = '<span style="color: var(--success);">Update initiated successfully. The page will reload in 15 seconds.</span>';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 15000);
+            } else {
+                const data = await response.json();
+                msg.innerHTML = `<span style="color: var(--danger);">Error: ${data.detail || 'Failed to start update'}</span>`;
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Update Application';
+            }
+        } catch (error) {
+            msg.innerHTML = `<span style="color: var(--danger);">Error: ${error.message}</span>`;
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Update Application';
         }
     }
 

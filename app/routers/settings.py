@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from pydantic import BaseModel
 from typing import Optional
 import json
+import subprocess
+import os
 
 from app.db import get_session
 from app.models import Settings
@@ -22,7 +24,6 @@ class OIDCSettings(BaseModel):
 
 class AppSettings(BaseModel):
     app_url: Optional[str] = None
-    ssl_cert: Optional[str] = None
 
 def get_setting(db: Session, key: str) -> Optional[str]:
     """Get a setting value from database"""
@@ -94,18 +95,46 @@ def get_app_settings(
 
 @router.put('/application')
 def update_app_settings(
-    settings: AppSettings,
+    app_url: Optional[str] = Form(None),
+    cert_file: Optional[UploadFile] = File(None),
+    key_file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_session),
     admin: dict = Depends(require_admin)
 ):
     """Update Application Configuration (admin only)"""
-    settings_dict = settings.model_dump()
+    settings_dict = {'app_url': app_url}
     settings_json = json.dumps(settings_dict)
     
     set_setting(db, 'app_config', settings_json, encrypted=False, actor=admin.get('username', 'admin'))
     db.commit()
     
-    return {'ok': True, 'message': 'Application settings updated successfully'}
+    ssl_dir = '/host_src/nginx/ssl' if os.path.exists('/host_src') else 'nginx/ssl'
+    os.makedirs(ssl_dir, exist_ok=True)
+    
+    files_updated = False
+    
+    if cert_file and cert_file.filename:
+        cert_path = os.path.join(ssl_dir, 'cert.pem')
+        with open(cert_path, 'wb') as f:
+            f.write(cert_file.file.read())
+        files_updated = True
+            
+    if key_file and key_file.filename:
+        key_path = os.path.join(ssl_dir, 'key.pem')
+        with open(key_path, 'wb') as f:
+            f.write(key_file.file.read())
+        files_updated = True
+
+    msg = 'Application settings updated successfully.'
+    if files_updated:
+        try:
+            subprocess.run(['docker', 'restart', 'ipam_nginx'], check=False)
+            msg += ' Rescheduled nginx to apply new certificates.'
+        except Exception as e:
+            print(f"Failed to restart nginx: {e}")
+            msg += ' However, failed to restart nginx.'
+    
+    return {'ok': True, 'message': msg}
 
 @router.get('/siem')
 def get_siem_settings(
@@ -140,3 +169,25 @@ def update_siem_settings(
     db.commit()
     
     return {'ok': True, 'message': 'SIEM settings updated successfully'}
+
+def run_update_script():
+    """Background task to run git pull and rebuild containers"""
+    script = """
+    cd /host_src
+    git pull origin main
+    docker compose up --build -d
+    """
+    try:
+        # Run in bash to execute the compound commands
+        subprocess.Popen(['bash', '-c', script], start_new_session=True)
+    except Exception as e:
+        print(f"Error starting update script: {e}")
+
+@router.post('/update_app')
+def trigger_app_update(
+    background_tasks: BackgroundTasks,
+    admin: dict = Depends(require_admin)
+):
+    """Trigger application update from GitHub (admin only)"""
+    background_tasks.add_task(run_update_script)
+    return {'ok': True, 'message': 'Update sequence initiated. The application will restart shortly.'}
