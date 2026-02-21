@@ -25,6 +25,9 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_admin: Optional[bool] = None
 
+class UserPasswordUpdate(BaseModel):
+    password: str
+
 class UserResponse(BaseModel):
     id: int
     username: str
@@ -151,3 +154,23 @@ def delete_user(
     db.commit()
     
     return {'ok': True, 'message': f'User {user.username} deleted'}
+
+@router.put('/{user_id}/password')
+def reset_password(
+    user_id: int,
+    password_data: UserPasswordUpdate,
+    db: Session = Depends(get_session),
+    admin: dict = Depends(require_admin)
+):
+    """Reset user password (admin only)"""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    user.hashed_password = hash_password(password_data.password)
+    
+    audit(db, admin.get('username', 'admin'), 'RESET_PASSWORD', 'user', user.id, None, None)
+    
+    db.commit()
+    
+    return {'ok': True, 'message': f'Password reset for user {user.username}'}

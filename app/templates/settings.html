@@ -290,6 +290,27 @@
         </div>
     </div>
 </div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Reset Password</h3>
+            <span class="close" onclick="closeResetPasswordModal()">&times;</span>
+        </div>
+        <div class="form-modern">
+            <p style="margin-bottom: var(--space-4);">Resetting password for: <strong id="resetTargetUsername"></strong>
+            </p>
+            <input type="hidden" id="resetTargetUserId">
+            <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-input" id="resetNewPassword">
+            </div>
+            <button class="btn btn-primary" onclick="resetUserPassword()">Reset Password</button>
+            <div id="resetPasswordMessage" style="margin-top: var(--space-4);"></div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -324,6 +345,7 @@
                     <td><span class="badge ${user.is_admin ? 'badge-primary' : 'badge-secondary'}">${user.is_admin ? 'Admin' : 'User'}</span></td>
                     <td><span class="badge ${user.is_active ? 'badge-success' : 'badge-danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
                     <td>
+                        <button class="btn btn-sm btn-secondary" onclick="openResetPasswordModal(${user.id}, '${user.username}')" style="margin-right: 4px;">Reset Key</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${user.username}')">Delete</button>
                     </td>
                 </tr>
@@ -382,6 +404,46 @@
             loadUsers();
         } catch (error) {
             alert('Error deleting user');
+        }
+    }
+
+    function openResetPasswordModal(id, username) {
+        document.getElementById('resetTargetUserId').value = id;
+        document.getElementById('resetTargetUsername').innerText = username;
+        document.getElementById('resetNewPassword').value = '';
+        document.getElementById('resetPasswordModal').style.display = 'block';
+    }
+
+    function closeResetPasswordModal() {
+        document.getElementById('resetPasswordModal').style.display = 'none';
+        document.getElementById('resetPasswordMessage').innerHTML = '';
+    }
+
+    async function resetUserPassword() {
+        const id = document.getElementById('resetTargetUserId').value;
+        const password = document.getElementById('resetNewPassword').value;
+
+        if (!password) {
+            document.getElementById('resetPasswordMessage').innerHTML = '<span style="color: var(--danger);">Password cannot be empty</span>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users/${id}/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+
+            if (response.ok) {
+                closeResetPasswordModal();
+                alert('Password reset successfully');
+            } else {
+                const data = await response.json();
+                document.getElementById('resetPasswordMessage').innerHTML = `<span style="color: var(--danger);">${data.detail || 'Error resetting password'}</span>`;
+            }
+        } catch (error) {
+            document.getElementById('resetPasswordMessage').innerHTML = `<span style="color: var(--danger);">${error.message}</span>`;
         }
     }
 
