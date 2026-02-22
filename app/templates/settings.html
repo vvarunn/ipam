@@ -142,7 +142,17 @@
 
                 <h3 class="card-title" style="font-size: 1.1rem; margin-bottom: var(--space-3);">System Update</h3>
                 <p style="color: var(--text-secondary); margin-bottom: var(--space-4); font-size: 0.9rem;">
-                    Upload a new application deployment package (ZIP) to update the system. Your data will not be lost.
+                    <strong>Option 1:</strong> Fetch the latest code directly from GitHub and restart the application
+                    stack.
+                </p>
+                <button class="btn btn-secondary" id="updateAppGitBtn" onclick="triggerAppUpdate()">
+                    🔄 Update Application via GitHub
+                </button>
+
+                <hr style="margin: var(--space-4) 0; border: none; border-top: 1px dashed var(--border-light);">
+
+                <p style="color: var(--text-secondary); margin-bottom: var(--space-4); font-size: 0.9rem;">
+                    <strong>Option 2:</strong> Upload a new application deployment package (ZIP) to update the system.
                 </p>
                 <div class="form-group">
                     <label class="form-label">Update Package (.zip)</label>
@@ -492,6 +502,41 @@
         }
     }
 
+    async function triggerAppUpdate() {
+        if (!confirm('Are you sure you want to update the application? This will pull the latest code from GitHub and restart the server.')) {
+            return;
+        }
+
+        const btn = document.getElementById('updateAppGitBtn');
+        const msg = document.getElementById('updateMessage');
+
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Updating...';
+        msg.innerHTML = '<span style="color: var(--text-secondary);">Initiating update sequence from GitHub. The application will be unavailable for a brief moment. Please wait...</span>';
+
+        try {
+            const response = await fetch('/api/settings/update_app', {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                msg.innerHTML = '<span style="color: var(--success);">Update initiated successfully. The page will reload in 15 seconds.</span>';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 15000);
+            } else {
+                const data = await response.json();
+                msg.innerHTML = `<span style="color: var(--danger);">Error: ${data.detail || 'Failed to start update'}</span>`;
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Update Application via GitHub';
+            }
+        } catch (error) {
+            msg.innerHTML = `<span style="color: var(--danger);">Error: ${error.message}</span>`;
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Update Application via GitHub';
+        }
+    }
+
     async function uploadAppUpdateZip() {
         if (!confirm('Are you sure you want to update the application? This will extract the uploaded package and restart the server.')) {
             return;
@@ -505,7 +550,7 @@
             msg.innerHTML = '<span style="color: var(--danger);">Please select a .zip package to upload first.</span>';
             return;
         }
-        
+
         const file = fileInput.files[0];
         if (!file.name.endsWith('.zip')) {
             msg.innerHTML = '<span style="color: var(--danger);">Only .zip files are supported.</span>';
