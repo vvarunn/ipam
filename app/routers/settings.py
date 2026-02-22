@@ -174,16 +174,36 @@ def update_siem_settings(
 
 def run_update_script():
     """Background task to run git pull and rebuild containers"""
+    
+    # Use /host_src if it exists, otherwise fallback to the current directory (for bare-metal/local deployments)
     script = """
-    cd /host_src
-    git pull origin main
-    docker compose up --build -d
+    HOST_DIR="/host_src"
+    if [ ! -d "$HOST_DIR" ]; then
+        HOST_DIR="."
+    fi
+    
+    cd $HOST_DIR
+    echo "Starting update process at $(date)..." > update_status.txt
+    echo "Working directory: $(pwd)" >> update_status.txt
+    
+    echo -e "\\n> Pulling latest changes from GitHub..." >> update_status.txt
+    git pull origin main >> update_status.txt 2>&1
+    
+    echo -e "\\n> Rebuilding containers..." >> update_status.txt
+    docker compose up --build -d >> update_status.txt 2>&1
+    
+    echo -e "\\nUpdate process initiated. Containers will restart shortly." >> update_status.txt
     """
     try:
         # Run in bash to execute the compound commands
         subprocess.Popen(['bash', '-c', script], start_new_session=True)
     except Exception as e:
         print(f"Error starting update script: {e}")
+        try:
+            with open('update_status.txt', 'a') as f:
+                f.write(f"\\nError starting update script: {e}\\n")
+        except:
+            pass
 
 @router.post('/update_app')
 def trigger_app_update(
@@ -191,8 +211,30 @@ def trigger_app_update(
     admin: dict = Depends(require_admin)
 ):
     """Trigger application update from GitHub (admin only)"""
+    # Create or clear the status file before starting
+    try:
+        with open('update_status.txt', 'w') as f:
+            f.write("Initializing update sequence...\\n")
+    except Exception:
+        pass
+        
     background_tasks.add_task(run_update_script)
     return {'ok': True, 'message': 'Update sequence initiated. The application will restart shortly.'}
+
+@router.get('/update_status')
+def get_update_status(
+    admin: dict = Depends(require_admin)
+):
+    """Get the current output of the application update script (admin only)"""
+    try:
+        if os.path.exists('update_status.txt'):
+            with open('update_status.txt', 'r') as f:
+                content = f.read()
+            return {'ok': True, 'status': content}
+        else:
+            return {'ok': True, 'status': 'Update status log not found. Update may not have started yet or has finished.'}
+    except Exception as e:
+        return {'ok': False, 'status': f"Error reading status: {str(e)}"}
 
 def run_zip_update_script(zip_path: str):
     """Background task to extract zip, load images, and rebuild containers"""

@@ -798,20 +798,40 @@ a:hover {
   border-left: 4px solid var(--success);
 }
 
+.stat-widget-success .stat-progress-bar {
+  background: var(--success);
+}
+
 .stat-widget-warning {
   border-left: 4px solid var(--pastel-yellow);
+}
+
+.stat-widget-warning .stat-progress-bar {
+  background: var(--pastel-yellow);
 }
 
 .stat-widget-info {
   border-left: 4px solid var(--info);
 }
 
+.stat-widget-info .stat-progress-bar {
+  background: var(--info);
+}
+
 .stat-widget-danger {
   border-left: 4px solid var(--danger);
 }
 
+.stat-widget-danger .stat-progress-bar {
+  background: var(--danger);
+}
+
 .stat-widget-orange {
   border-left: 4px solid var(--accent-orange);
+}
+
+.stat-widget-orange .stat-progress-bar {
+  background: var(--accent-orange);
 }
 
 /* Pastel Variants - Light backgrounds with dark text */

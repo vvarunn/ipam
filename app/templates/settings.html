@@ -148,6 +148,9 @@
                 <button class="btn btn-secondary" id="updateAppGitBtn" onclick="triggerAppUpdate()">
                     🔄 Update Application via GitHub
                 </button>
+                <div id="updateTerminal"
+                    style="display: none; background: #1e1e1e; color: #00ff00; padding: var(--space-4); margin-top: var(--space-4); border-radius: var(--radius-md); font-family: monospace; font-size: 13px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #333;">
+                </div>
 
                 <hr style="margin: var(--space-4) 0; border: none; border-top: 1px dashed var(--border-light);">
 
@@ -509,10 +512,14 @@
 
         const btn = document.getElementById('updateAppGitBtn');
         const msg = document.getElementById('updateMessage');
+        const terminalItem = document.getElementById('updateTerminal');
 
         btn.disabled = true;
         btn.innerHTML = '⏳ Updating...';
-        msg.innerHTML = '<span style="color: var(--text-secondary);">Initiating update sequence from GitHub. The application will be unavailable for a brief moment. Please wait...</span>';
+        msg.innerHTML = '<span style="color: var(--text-secondary);">Initiating update sequence from GitHub. Please wait...</span>';
+
+        terminalItem.style.display = 'block';
+        terminalItem.innerHTML = 'Initializing update...\\n';
 
         try {
             const response = await fetch('/api/settings/update_app', {
@@ -520,21 +527,102 @@
             });
 
             if (response.ok) {
-                msg.innerHTML = '<span style="color: var(--success);">Update initiated successfully. The page will reload in 15 seconds.</span>';
-                setTimeout(() => {
-                    window.location.reload();
-                }, 15000);
+                // Start polling the status
+                startUpdatePolling();
             } else {
                 const data = await response.json();
                 msg.innerHTML = `<span style="color: var(--danger);">Error: ${data.detail || 'Failed to start update'}</span>`;
                 btn.disabled = false;
                 btn.innerHTML = '🔄 Update Application via GitHub';
+                terminalItem.style.display = 'none';
             }
         } catch (error) {
             msg.innerHTML = `<span style="color: var(--danger);">Error: ${error.message}</span>`;
             btn.disabled = false;
             btn.innerHTML = '🔄 Update Application via GitHub';
+            terminalItem.style.display = 'none';
         }
+    }
+
+    let updatePollInterval;
+    let offlineCount = 0;
+
+    function startUpdatePolling() {
+        offlineCount = 0;
+        const terminalItem = document.getElementById('updateTerminal');
+
+        updatePollInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/settings/update_status');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status) {
+                        terminalItem.innerHTML = data.status;
+                        terminalItem.scrollTop = terminalItem.scrollHeight; // Auto-scroll to bottom
+                    }
+                    offlineCount = 0; // Reset offline count if we get a good response
+                } else {
+                    // Server returned an error, might be going down
+                    offlineCount++;
+                }
+            } catch (error) {
+                // Network error, server is likely restarting
+                offlineCount++;
+
+                if (offlineCount === 1) {
+                    terminalItem.innerHTML += '\\n[System] Connection lost. Server is restarting...';
+                    terminalItem.scrollTop = terminalItem.scrollHeight;
+                }
+            }
+
+            // If offline for a while, start checking if it's back up
+            if (offlineCount >= 3) {
+                clearInterval(updatePollInterval);
+                waitForServerReboot();
+            }
+        }, 1500);
+    }
+
+    function waitForServerReboot() {
+        const terminalItem = document.getElementById('updateTerminal');
+        const msg = document.getElementById('updateMessage');
+
+        let attemptCount = 0;
+        const checkInterval = setInterval(async () => {
+            attemptCount++;
+            terminalItem.innerHTML += `\\n[System] Checking if server is back online (attempt ${attemptCount})...`;
+            terminalItem.scrollTop = terminalItem.scrollHeight;
+
+            try {
+                // Try fetching a simple endpoint
+                const response = await fetch('/api/health', { method: 'GET', cache: 'no-store' });
+
+                // Or if we get any HTML back (like a redirect to login)
+                if (response.ok || response.status === 401 || response.status === 403) {
+                    clearInterval(checkInterval);
+                    terminalItem.innerHTML += '\\n[System] Server is online! Reloading page...';
+                    terminalItem.scrollTop = terminalItem.scrollHeight;
+                    msg.innerHTML = '<span style="color: var(--success);">Update complete! Reloading...</span>';
+
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            } catch (error) {
+                // Still waiting
+            }
+
+            if (attemptCount > 60) { // Give up after ~2 minutes
+                clearInterval(checkInterval);
+                terminalItem.innerHTML += '\\n[System] Server taking too long or failed to restart. Please manually refresh the page later.';
+                terminalItem.scrollTop = terminalItem.scrollHeight;
+
+                const btn = document.getElementById('updateAppGitBtn');
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Update Application via GitHub';
+            }
+        }, 2000);
     }
 
     async function uploadAppUpdateZip() {
