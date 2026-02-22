@@ -2,6 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Allow proxy args during build
+ARG http_proxy
+ARG https_proxy
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \

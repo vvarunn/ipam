@@ -241,9 +241,11 @@ def run_update_script():
     echo -e "\\n> Rebuilding containers..." >> update_status.txt
     # Fallback to docker-compose if docker compose is missing
     if docker compose version > /dev/null 2>&1; then
-        docker compose up --build -d >> update_status.txt 2>&1
+        docker compose build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg HTTP_PROXY=$HTTP_PROXY --build-arg HTTPS_PROXY=$HTTPS_PROXY app >> update_status.txt 2>&1
+        docker compose up -d >> update_status.txt 2>&1
     else
-        docker-compose up --build -d >> update_status.txt 2>&1
+        docker-compose build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg HTTP_PROXY=$HTTP_PROXY --build-arg HTTPS_PROXY=$HTTPS_PROXY app >> update_status.txt 2>&1
+        docker-compose up -d >> update_status.txt 2>&1
     fi
     
     echo -e "\\nUpdate process initiated. Containers will restart shortly." >> update_status.txt
