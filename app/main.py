@@ -128,6 +128,10 @@ def settings_page(request: Request):
         
     return templates.TemplateResponse('settings.html', {'request': request, 'user': user, 'is_admin': True})
 
+@app.get('/api/health')
+def health_check():
+    return {'status': 'ok', 'version': __version__}
+
 # routers
 app.include_router(auth_router)
 app.include_router(ip_router)
