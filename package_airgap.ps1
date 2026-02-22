@@ -33,7 +33,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 4. Create Package Zip
-$ZipFile = "ipam_airgap_package.zip"
+$ZipFile = "D:\projects\ipam_airgap_package.zip"
 # Ensure we exclude the temp dir itself and large build artifacts
 $Excludes = @(".git", ".venv", "__pycache__", ".idea", ".vscode", "node_modules", "*.zip", "*.tar", "ipam_pkg_temp")
 
@@ -58,4 +58,4 @@ Compress-Archive -Path "$TempDir\*" -DestinationPath $ZipFile -Force
 Remove-Item -Recurse -Force $TempDir
 
 Write-Host "Packaging Complete!" -ForegroundColor Green
-Write-Host "Artifact: $PWD\$ZipFile"
+Write-Host "Artifact: $ZipFile"
