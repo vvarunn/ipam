@@ -214,11 +214,29 @@ def run_update_script():
     if [ -n "{https_proxy}" ]; then export HTTPS_PROXY="{https_proxy}"; export https_proxy="{https_proxy}"; fi
     if [ -n "{no_proxy}" ]; then export NO_PROXY="{no_proxy}"; export no_proxy="{no_proxy}"; fi
     
-    # Configure git safe directory for the host mount
-    git config --global --add safe.directory $HOST_DIR
-    
-    echo -e "\\n> Pulling latest changes from GitHub..." >> update_status.txt
-    git pull origin main >> update_status.txt 2>&1
+    if [ -d ".git" ]; then
+        echo -e "\\n> Detected Git repository. Pulling latest changes from GitHub..." >> update_status.txt
+        git config --global --add safe.directory $HOST_DIR
+        git pull origin main >> update_status.txt 2>&1
+    else
+        echo -e "\\n> Non-Git deployment detected. Downloading latest release from GitHub..." >> update_status.txt
+        # Make sure unzip is installed
+        apt-get update && apt-get install -y unzip > /dev/null 2>&1 || true
+        
+        # Download and extract the repository zip
+        curl -SL https://github.com/vvarunn/ipam/archive/refs/heads/main.zip -o main.zip >> update_status.txt 2>&1
+        if [ -f "main.zip" ]; then
+            echo "> Extracting files..." >> update_status.txt
+            unzip -o main.zip -d /tmp/ipam_update >> update_status.txt 2>&1
+            # Copy extracted files over existing files (excluding the wrapper directory)
+            cp -rf /tmp/ipam_update/ipam-main/* . >> update_status.txt 2>&1
+            rm -rf /tmp/ipam_update main.zip >> update_status.txt 2>&1
+            echo "> Update files applied successfully." >> update_status.txt
+        else
+            echo "> Failed to download update from GitHub." >> update_status.txt
+            exit 1
+        fi
+    fi
     
     echo -e "\\n> Rebuilding containers..." >> update_status.txt
     # Fallback to docker-compose if docker compose is missing
