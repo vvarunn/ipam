@@ -23,8 +23,9 @@ from .routers.settings import router as settings_router
 from .routers.audit import router as audit_router
 
 APP_TITLE = os.getenv('APP_TITLE', 'IPAM')
+__version__ = "1.0.0"
 
-app = FastAPI(title=APP_TITLE, version="1.2")
+app = FastAPI(title=APP_TITLE, version=__version__)
 
 app.add_middleware(
     SessionMiddleware,
@@ -37,6 +38,17 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 templates = Jinja2Templates(directory='app/templates')
+
+# Inject version into all templates globally
+@app.middleware("http")
+async def add_template_context(request: Request, call_next):
+    # This ensures version is available in templates if we set it in request state
+    request.state.app_version = __version__
+    response = await call_next(request)
+    return response
+
+# Also directly patch Jinja2 environment as a cleaner global
+templates.env.globals['app_version'] = __version__
 
 @app.on_event('startup')
 def startup():
