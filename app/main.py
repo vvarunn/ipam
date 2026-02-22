@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .db import engine, get_session, SessionLocal
 from .models import Base
 from .crud import ensure_sites, ensure_indexes, search, fix_ip_sites_and_vlans
-from .auth_oidc import router as auth_router, setup_oauth
+from .auth_sso import router as auth_router, setup_oauth
 from .utils import is_admin
 from .user_crud import ensure_admin_user
 
@@ -23,7 +23,7 @@ from .routers.settings import router as settings_router
 from .routers.audit import router as audit_router
 
 APP_TITLE = os.getenv('APP_TITLE', 'IPAM')
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 app = FastAPI(title=APP_TITLE, version=__version__)
 

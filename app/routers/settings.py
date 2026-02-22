@@ -16,13 +16,20 @@ from app.crud import audit
 
 router = APIRouter(prefix='/api/settings', tags=['settings'])
 
-class OIDCSettings(BaseModel):
-    enabled: bool = False
+class SSOSettings(BaseModel):
+    sso_type: str = 'none'  # 'none', 'oidc', 'saml'
+    
+    # OIDC Fields
     discovery_url: Optional[str] = None
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     redirect_uri: Optional[str] = None
     scopes: str = 'openid profile email'
+    
+    # SAML Fields
+    saml_idp_entity_id: Optional[str] = None
+    saml_idp_sso_url: Optional[str] = None
+    saml_idp_x509_cert: Optional[str] = None
 
 class AppSettings(BaseModel):
     app_url: Optional[str] = None
@@ -48,36 +55,48 @@ def set_setting(db: Session, key: str, value: str, encrypted: bool = False, acto
     audit(db, actor, 'UPDATE_SETTING', 'settings', None, {'key': key, 'value': old_value}, {'key': key})
     return setting
 
-@router.get('/oidc', response_model=OIDCSettings)
-def get_oidc_settings(
+@router.get('/sso', response_model=SSOSettings)
+def get_sso_settings(
     db: Session = Depends(get_session),
     admin: dict = Depends(require_admin)
 ):
-    """Get OIDC configuration (admin only)"""
-    settings_json = get_setting(db, 'oidc_config')
-    
+    """Get SSO configuration (admin only)"""
+    # Fallback to older oidc_config key if sso_config doesn't exist yet
+    settings_json = get_setting(db, 'sso_config')
+    if not settings_json:
+        old_oidc = get_setting(db, 'oidc_config')
+        if old_oidc:
+            try:
+                old_data = json.loads(old_oidc)
+                # Migrate active OIDC
+                if old_data.get('enabled'):
+                    old_data['sso_type'] = 'oidc'
+                return SSOSettings(**old_data)
+            except:
+                pass
+                
     if settings_json:
         try:
-            return OIDCSettings(**json.loads(settings_json))
+            return SSOSettings(**json.loads(settings_json))
         except:
             pass
     
-    return OIDCSettings()
+    return SSOSettings()
 
-@router.put('/oidc')
-def update_oidc_settings(
-    settings: OIDCSettings,
+@router.put('/sso')
+def update_sso_settings(
+    settings: SSOSettings,
     db: Session = Depends(get_session),
     admin: dict = Depends(require_admin)
 ):
-    """Update OIDC configuration (admin only)"""
+    """Update SSO configuration (admin only)"""
     settings_dict = settings.model_dump()
     settings_json = json.dumps(settings_dict)
     
-    set_setting(db, 'oidc_config', settings_json, encrypted=False, actor=admin.get('username', 'admin'))
+    set_setting(db, 'sso_config', settings_json, encrypted=False, actor=admin.get('username', 'admin'))
     db.commit()
     
-    return {'ok': True, 'message': 'OIDC settings updated successfully'}
+    return {'ok': True, 'message': 'SSO settings updated successfully'}
 
 @router.get('/application', response_model=AppSettings)
 def get_app_settings(

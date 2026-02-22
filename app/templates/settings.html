@@ -73,8 +73,8 @@
         <div class="settings-tab" onclick="switchTab('application')">
             Application
         </div>
-        <div class="settings-tab" onclick="switchTab('oidc')">
-            OIDC / SSO
+        <div class="settings-tab" onclick="switchTab('sso')">
+            SSO Configuration
         </div>
         <div class="settings-tab" onclick="switchTab('audit')">
             Audit Logs
@@ -169,45 +169,88 @@
         </div>
     </div>
 
-    <!-- OIDC Settings Tab -->
-    <div id="oidc" class="tab-content">
+    <!-- SSO Settings Tab -->
+    <div id="sso" class="tab-content">
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">OIDC Configuration</h2>
+                <h2 class="card-title">SSO Configuration</h2>
             </div>
             <div class="form-modern">
-                <div class="alert-info"
-                    style="margin-bottom: var(--space-4); padding: var(--space-3); background-color: var(--bg-tertiary); border-left: 4px solid var(--primary-color); border-radius: var(--radius-md);">
-                    <strong>Configuration Instructions:</strong> Register this application with your Identity Provider
-                    (IdP) using the <strong>Redirect URI</strong> specified below. Ensure your IdP supports OpenID
-                    Connect discovery and provides the necessary Client ID and Client Secret.
+                <div class="form-group" style="margin-bottom: var(--space-6);">
+                    <label class="form-label">Single Sign-On Authentication Type</label>
+                    <select class="form-select" id="ssoType" onchange="toggleSsoSections()">
+                        <option value="none">Disabled (Local Authentication Only)</option>
+                        <option value="oidc">OpenID Connect (OIDC)</option>
+                        <option value="saml">SAML 2.0</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Discovery URL</label>
-                    <input type="text" class="form-input" id="oidcDiscovery"
-                        placeholder="https://oidc.example.com/.well-known/openid-configuration">
+
+                <!-- OIDC Section -->
+                <div id="oidcSection"
+                    style="display: none; padding-top: var(--space-4); border-top: 1px solid var(--border-light);">
+                    <div class="alert-info"
+                        style="margin-bottom: var(--space-4); padding: var(--space-3); background-color: var(--bg-tertiary); border-left: 4px solid var(--primary-color); border-radius: var(--radius-md);">
+                        <strong>OIDC Instructions:</strong> Register this application with your Identity Provider using
+                        the <strong>Redirect URI</strong> below.
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Discovery URL</label>
+                        <input type="text" class="form-input" id="oidcDiscovery"
+                            placeholder="https://oidc.example.com/.well-known/openid-configuration">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Client ID</label>
+                        <input type="text" class="form-input" id="oidcClientId">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Client Secret</label>
+                        <input type="password" class="form-input" id="oidcClientSecret">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Redirect URI</label>
+                        <input type="text" class="form-input" id="oidcRedirect"
+                            placeholder="https://ipam.example.com/auth/callback">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Scopes</label>
+                        <input type="text" class="form-input" id="oidcScopes" value="openid profile email">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Client ID</label>
-                    <input type="text" class="form-input" id="oidcClientId">
+
+                <!-- SAML Section -->
+                <div id="samlSection"
+                    style="display: none; padding-top: var(--space-4); border-top: 1px solid var(--border-light);">
+                    <div class="alert-info"
+                        style="margin-bottom: var(--space-4); padding: var(--space-3); background-color: var(--bg-tertiary); border-left: 4px solid var(--primary-color); border-radius: var(--radius-md);">
+                        <strong>SAML Instructions:</strong> Provide the SP Entity ID and ACS URL below to your Identity
+                        Provider. Copy the IdP metadata details into the fields below to establish trust.
+                        <br><br>
+                        <strong>SP Entity ID:</strong> <span class="badge badge-info" id="samlSpEntityId"></span><br>
+                        <strong>ACS URL:</strong> <span class="badge badge-info" id="samlAcsUrl"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IdP Entity ID</label>
+                        <input type="text" class="form-input" id="samlIdpEntityId"
+                            placeholder="https://sts.windows.net/xxxxx/">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IdP SSO URL</label>
+                        <input type="text" class="form-input" id="samlIdpSsoUrl"
+                            placeholder="https://login.microsoftonline.com/xxxxx/saml2">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IdP x509 Certificate</label>
+                        <textarea class="form-input" id="samlIdpx509Cert" rows="6"
+                            placeholder="-----BEGIN CERTIFICATE-----..."></textarea>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Client Secret</label>
-                    <input type="password" class="form-input" id="oidcClientSecret">
+
+                <div style="margin-top: var(--space-6);">
+                    <button class="btn btn-primary" onclick="saveSsoSettings()">
+                        💾 Save Configuration
+                    </button>
+                    <div id="ssoMessage" style="margin-top: var(--space-4);"></div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Redirect URI</label>
-                    <input type="text" class="form-input" id="oidcRedirect"
-                        placeholder="https://ipam.example.com/auth/callback">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Scopes</label>
-                    <input type="text" class="form-input" id="oidcScopes" value="openid profile email">
-                </div>
-                <button class="btn btn-primary" onclick="saveOidcSettings()">
-                    💾 Save Configuration
-                </button>
-                <div id="oidcMessage" style="margin-top: var(--space-4);"></div>
             </div>
         </div>
     </div>
@@ -343,7 +386,7 @@
         // Load data if needed
         if (tabId === 'users') loadUsers();
         if (tabId === 'application') loadAppSettings();
-        if (tabId === 'oidc') loadOidcSettings();
+        if (tabId === 'sso') loadSsoSettings();
         if (tabId === 'audit') loadAuditLogs();
     }
 
@@ -684,36 +727,61 @@
         }
     }
 
-    // --- OIDC Settings ---
-    async function loadOidcSettings() {
+    // --- SSO Settings ---
+    function toggleSsoSections() {
+        const type = document.getElementById('ssoType').value;
+        document.getElementById('oidcSection').style.display = type === 'oidc' ? 'block' : 'none';
+        document.getElementById('samlSection').style.display = type === 'saml' ? 'block' : 'none';
+    }
+
+    async function loadSsoSettings() {
         try {
-            const response = await fetch('/api/settings/oidc');
+            const response = await fetch('/api/settings/sso');
+            if (!response.ok) return;
             const data = await response.json();
 
+            document.getElementById('ssoType').value = data.sso_type || 'none';
+
+            // OIDC
             document.getElementById('oidcDiscovery').value = data.discovery_url || '';
             document.getElementById('oidcClientId').value = data.client_id || '';
             document.getElementById('oidcRedirect').value = data.redirect_uri || '';
             document.getElementById('oidcScopes').value = data.scopes || 'openid profile email';
+
+            // SAML
+            document.getElementById('samlIdpEntityId').value = data.saml_idp_entity_id || '';
+            document.getElementById('samlIdpSsoUrl').value = data.saml_idp_sso_url || '';
+            document.getElementById('samlIdpx509Cert').value = data.saml_idp_x509_cert || '';
+
+            // Update info badges dynamically
+            const hostUrl = window.location.origin;
+            document.getElementById('samlSpEntityId').textContent = `${hostUrl}/auth/saml/metadata`;
+            document.getElementById('samlAcsUrl').textContent = `${hostUrl}/auth/saml/acs`;
+
+            toggleSsoSections();
         } catch (error) {
             console.error(error);
         }
     }
 
-    async function saveOidcSettings() {
-        const msg = document.getElementById('oidcMessage');
+    async function saveSsoSettings() {
+        const msg = document.getElementById('ssoMessage');
         msg.innerHTML = 'Saving...';
 
         try {
-            const response = await fetch('/api/settings/oidc', {
+            const response = await fetch('/api/settings/sso', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    enabled: true,
+                    sso_type: document.getElementById('ssoType').value,
                     discovery_url: document.getElementById('oidcDiscovery').value,
                     client_id: document.getElementById('oidcClientId').value,
                     client_secret: document.getElementById('oidcClientSecret').value,
                     redirect_uri: document.getElementById('oidcRedirect').value,
-                    scopes: document.getElementById('oidcScopes').value
+                    scopes: document.getElementById('oidcScopes').value,
+                    saml_idp_entity_id: document.getElementById('samlIdpEntityId').value,
+                    saml_idp_sso_url: document.getElementById('samlIdpSsoUrl').value,
+                    saml_idp_x509_cert: document.getElementById('samlIdpx509Cert').value
                 })
             });
 
