@@ -148,9 +148,6 @@
                 <button class="btn btn-secondary" id="updateAppGitBtn" onclick="triggerAppUpdate()">
                     🔄 Update Application via GitHub
                 </button>
-                <div id="updateTerminal"
-                    style="display: none; background: #1e1e1e; color: #00ff00; padding: var(--space-4); margin-top: var(--space-4); border-radius: var(--radius-md); font-family: monospace; font-size: 13px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #333;">
-                </div>
 
                 <hr style="margin: var(--space-4) 0; border: none; border-top: 1px dashed var(--border-light);">
 
@@ -165,6 +162,9 @@
                     📦 Upload & Update Application
                 </button>
                 <div id="updateMessage" style="margin-top: var(--space-3); font-size: 0.9rem;"></div>
+                <div id="updateTerminal"
+                    style="display: none; background: #1e1e1e; color: #00ff00; padding: var(--space-4); margin-top: var(--space-4); border-radius: var(--radius-md); font-family: monospace; font-size: 13px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #333;">
+                </div>
             </div>
         </div>
     </div>
@@ -633,6 +633,7 @@
         const btn = document.getElementById('updateAppBtn');
         const msg = document.getElementById('updateMessage');
         const fileInput = document.getElementById('appUpdateZip');
+        const terminalItem = document.getElementById('updateTerminal');
 
         if (!fileInput.files || fileInput.files.length === 0) {
             msg.innerHTML = '<span style="color: var(--danger);">Please select a .zip package to upload first.</span>';
@@ -647,7 +648,10 @@
 
         btn.disabled = true;
         btn.innerHTML = '⏳ Uploading...';
-        msg.innerHTML = '<span style="color: var(--text-secondary);">Uploading package. Do not close this page...</span>';
+        msg.innerHTML = '<span style="color: var(--text-secondary);">Uploading package to server. Please wait...</span>';
+
+        terminalItem.style.display = 'block';
+        terminalItem.innerHTML = 'Transmitting package to server...\\n';
 
         const formData = new FormData();
         formData.append('file', file);
@@ -660,21 +664,23 @@
 
             if (response.ok) {
                 const data = await response.json();
-                msg.innerHTML = `<span style="color: var(--success);">${data.message} The page will reload in 15 seconds.</span>`;
+                msg.innerHTML = `<span style="color: var(--success);">${data.message} The page will reload after the restart is complete.</span>`;
                 btn.innerHTML = '✅ Update Uploaded';
-                setTimeout(() => {
-                    window.location.reload();
-                }, 15000);
+
+                // Hook into the same generic polling used by GitHub update
+                startUpdatePolling();
             } else {
                 const data = await response.json();
                 msg.innerHTML = `<span style="color: var(--danger);">Error: ${data.detail || 'Failed to upload package'}</span>`;
                 btn.disabled = false;
                 btn.innerHTML = '📦 Upload & Update Application';
+                terminalItem.style.display = 'none';
             }
         } catch (error) {
             msg.innerHTML = `<span style="color: var(--danger);">Error: ${error.message}</span>`;
             btn.disabled = false;
             btn.innerHTML = '📦 Upload & Update Application';
+            terminalItem.style.display = 'none';
         }
     }
 

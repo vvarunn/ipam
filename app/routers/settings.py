@@ -240,33 +240,47 @@ def run_zip_update_script(zip_path: str):
     """Background task to extract zip, load images, and rebuild containers"""
     host_dir = '/host_src'
     if not os.path.exists(host_dir):
-        print("Error: /host_src directory not found. Cannot perform zip update.")
-        return
+        host_dir = '.'
         
+    def log_status(msg):
+        try:
+            with open('update_status.txt', 'a') as f:
+                f.write(f"{msg}\\n")
+        except:
+            pass
+
     try:
+        log_status(f"Starting zip update process at $(date)...")
+        log_status(f"Working directory: {host_dir}")
+        log_status(f"\\n> Extracting uploaded package...")
+        
         # Extract the zip file, overwriting existing files
         print(f"Extracting {zip_path} to {host_dir}...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(host_dir)
             
         print("Zip extraction completed.")
+        log_status(f"> Package extracted successfully.")
         
         # Load docker images and restart containers
         script = f"""
         cd {host_dir}
         if [ -f "ipam_images.tar" ]; then
-            echo "Loading docker images from tar archive..."
-            docker load -i ipam_images.tar
+            echo "\\n> Loading docker images from tar archive (this may take a few minutes)..." >> update_status.txt
+            docker load -i ipam_images.tar >> update_status.txt 2>&1
+            echo "> Images loaded." >> update_status.txt
         fi
         
-        echo "Restarting application stack..."
-        docker compose up -d --no-build
+        echo -e "\\n> Restarting application stack..." >> update_status.txt
+        docker compose up -d --no-build >> update_status.txt 2>&1
+        echo -e "\\nUpdate process initiated. Containers will restart shortly." >> update_status.txt
         """
         
         # Run in bash to execute the compound commands
         subprocess.Popen(['bash', '-c', script], start_new_session=True)
     except Exception as e:
         print(f"Error during zip update sequence: {e}")
+        log_status(f"\\nError during zip update sequence: {e}")
     finally:
         # Clean up the uploaded zip file if it still exists
         try:
@@ -289,6 +303,13 @@ def trigger_zip_app_update(
     if not os.path.exists(host_dir):
         # Fallback for dev environment without volume mounts
         host_dir = '.'
+        
+    # Create or clear the status file before starting
+    try:
+        with open('update_status.txt', 'w') as f:
+            f.write("Initializing update sequence via Zip upload...\\n")
+    except Exception:
+        pass
         
     temp_zip_path = os.path.join(host_dir, 'update_temp.zip')
     
