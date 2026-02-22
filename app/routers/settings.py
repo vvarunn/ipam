@@ -195,7 +195,11 @@ def run_update_script():
     """Background task to run git pull and rebuild containers"""
     
     # Use /host_src if it exists, otherwise fallback to the current directory (for bare-metal/local deployments)
-    script = """
+    http_proxy = os.getenv('HTTP_PROXY', os.getenv('http_proxy', ''))
+    https_proxy = os.getenv('HTTPS_PROXY', os.getenv('https_proxy', ''))
+    no_proxy = os.getenv('NO_PROXY', os.getenv('no_proxy', ''))
+    
+    script = f"""
     HOST_DIR="/host_src"
     if [ ! -d "$HOST_DIR" ]; then
         HOST_DIR="."
@@ -205,11 +209,24 @@ def run_update_script():
     echo "Starting update process at $(date)..." > update_status.txt
     echo "Working directory: $(pwd)" >> update_status.txt
     
+    # Export proxy settings
+    if [ -n "{http_proxy}" ]; then export HTTP_PROXY="{http_proxy}"; export http_proxy="{http_proxy}"; fi
+    if [ -n "{https_proxy}" ]; then export HTTPS_PROXY="{https_proxy}"; export https_proxy="{https_proxy}"; fi
+    if [ -n "{no_proxy}" ]; then export NO_PROXY="{no_proxy}"; export no_proxy="{no_proxy}"; fi
+    
+    # Configure git safe directory for the host mount
+    git config --global --add safe.directory $HOST_DIR
+    
     echo -e "\\n> Pulling latest changes from GitHub..." >> update_status.txt
     git pull origin main >> update_status.txt 2>&1
     
     echo -e "\\n> Rebuilding containers..." >> update_status.txt
-    docker compose up --build -d >> update_status.txt 2>&1
+    # Fallback to docker-compose if docker compose is missing
+    if docker compose version > /dev/null 2>&1; then
+        docker compose up --build -d >> update_status.txt 2>&1
+    else
+        docker-compose up --build -d >> update_status.txt 2>&1
+    fi
     
     echo -e "\\nUpdate process initiated. Containers will restart shortly." >> update_status.txt
     """
