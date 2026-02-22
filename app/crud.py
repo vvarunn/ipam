@@ -153,3 +153,35 @@ def ip_history(db: Session, ip_id: int):
         select(IPAssignment).where(IPAssignment.ip_id == ip_id).order_by(IPAssignment.updated_at.desc())
     ).scalars().all()
     return ip_obj, assigns
+
+def fix_ip_sites_and_vlans(db: Session):
+    try:
+        ips = db.execute(select(IPAddress)).scalars().all()
+        fixed_count = 0
+        for ip in ips:
+            correct_site_code = infer_site_code(str(ip.ip))
+            try:
+                correct_site_id = get_site_id(db, correct_site_code)
+            except ValueError:
+                continue
+                
+            correct_vlan_ref = infer_vlan_ref(db, correct_site_id, str(ip.ip))
+            
+            needs_update = False
+            if ip.site_id != correct_site_id:
+                ip.site_id = correct_site_id
+                needs_update = True
+                
+            if ip.vlan_ref != correct_vlan_ref:
+                ip.vlan_ref = correct_vlan_ref
+                needs_update = True
+                
+            if needs_update:
+                fixed_count += 1
+                
+        if fixed_count > 0:
+            db.commit()
+            print(f"Startup check: Successfully fixed/updated {fixed_count} IP records.")
+    except Exception as e:
+        print(f"Startup check: Error fixing IP sites and VLANs: {e}")
+        db.rollback()

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from .db import engine, get_session, SessionLocal
 from .models import Base
-from .crud import ensure_sites, ensure_indexes, search
+from .crud import ensure_sites, ensure_indexes, search, fix_ip_sites_and_vlans
 from .auth_oidc import router as auth_router, setup_oauth
 from .utils import is_admin
 from .user_crud import ensure_admin_user
@@ -46,6 +46,7 @@ def startup():
     try:
         ensure_sites(db)
         ensure_indexes(db)
+        fix_ip_sites_and_vlans(db)
         
         # Create default admin user if configured
         admin_username = os.getenv('LOCAL_ADMIN_USERNAME')
