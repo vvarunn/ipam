@@ -1,0 +1,64 @@
+services:
+  db:
+    image: postgres:16
+    container_name: ipam_pg
+    environment:
+      POSTGRES_DB: ipam
+      POSTGRES_USER: ipam_user
+      POSTGRES_PASSWORD: ipam_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - ipam_pgdata:/var/lib/postgresql/data
+    networks:
+      - ipam-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ipam_user -d ipam" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ipam-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ipam_app
+    environment:
+      - DATABASE_URL=postgresql://ipam_user:ipam_pass@db:5432/ipam
+      - SESSION_SECRET=${SESSION_SECRET:-dev_secret}
+      - APP_TITLE=${APP_TITLE:-IPAM}
+      - LOCAL_ADMIN_USERNAME=${LOCAL_ADMIN_USERNAME:-}
+      - LOCAL_ADMIN_PASSWORD=${LOCAL_ADMIN_PASSWORD:-}
+      - LOCAL_ADMIN_EMAIL=${LOCAL_ADMIN_EMAIL:-}
+    volumes:
+      - .:/host_src
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ipam-network
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    image: ipam-nginx:latest
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: ipam_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - ipam-network
+    depends_on:
+      - app
+    restart: unless-stopped
+
+networks:
+  ipam-network:
+    external: true
+
+volumes:
+  ipam_pgdata:
