@@ -1,10 +1,10 @@
-# IPAM Manager (Postgres + Omnissa OIDC + VLAN + Bulk + Export)
+# IPAM Manager (Postgres + OIDC + VLAN + Bulk + Export)
 
 A lightweight IP management web app:
 - IP + hostname mapping with **history** (assignment versions)
 - **Audit log** of changes
 - VLANs with **CIDR auto-mapping**
-- Omnissa OIDC login (session) + optional Bearer JWT for API
+- Local + OIDC login (session) + optional Bearer JWT for API
 - Bulk upsert (CSV/XLSX)
 - Export (CSV/XLSX)
 
