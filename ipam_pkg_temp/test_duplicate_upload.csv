@@ -1,4 +1,0 @@
-ip,hostname,label,notes,status
-100.121.50.200,brand-new-server,Test,This is a new IP entry,allocated
-100.121.50.99,updated-test-server,Test,This should UPDATE the existing entry,allocated
-100.121.50.201,another-new-server,Test,Another new IP entry,allocated
