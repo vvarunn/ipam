@@ -25,18 +25,24 @@ def get_oidc_config(db: Session = None):
         if setting and setting.value:
             config = json.loads(setting.value)
             return config
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error loading OIDC config: {e}")
     finally:
         if close_db:
             db.close()
             
     return None
 
-def setup_oauth():
-    config = get_oidc_config()
+def setup_oauth(config: dict = None):
+    if config is None:
+        config = get_oidc_config()
+        
     if not config or not config.get('enabled') or not config.get('discovery_url'):
         return
+        
+    # Unregister first just in case we are updating the config
+    if 'omnissa' in oauth._registry:
+        del oauth._registry['omnissa']
         
     oauth.register(
         name='omnissa',
@@ -59,17 +65,35 @@ async def login(request: Request, db: Session = Depends(get_session)):
         scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
         redirect_uri = f"{scheme}://{request.url.netloc}/auth/callback"
         
-    setup_oauth() # Ensure OAuth is set up with latest config
+    setup_oauth(config) # Ensure OAuth is set up with latest config
     
     if 'omnissa' not in oauth._registry:
-        raise HTTPException(status_code=500, detail='OIDC configuration error')
+        raise HTTPException(status_code=500, detail='OIDC configuration error: Client not registered. Please check Discovery URL.')
         
-    return await oauth.omnissa.authorize_redirect(request, redirect_uri)
+    try:
+        return await oauth.omnissa.authorize_redirect(request, redirect_uri)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f'Failed to communicate with OIDC provider. Please check the Discovery URL and network connectivity. Error: {str(e)}'
+        )
 
 @router.get('/callback')
-async def callback(request: Request):
-    token = await oauth.omnissa.authorize_access_token(request)
-    userinfo = token.get('userinfo') or await oauth.omnissa.userinfo(token=token)
+async def callback(request: Request, db: Session = Depends(get_session)):
+    config = get_oidc_config(db)
+    setup_oauth(config)
+
+    if 'omnissa' not in oauth._registry:
+        raise HTTPException(status_code=500, detail='OIDC configuration error: Client not registered during callback')
+
+    try:
+        token = await oauth.omnissa.authorize_access_token(request)
+        userinfo = token.get('userinfo') or await oauth.omnissa.userinfo(token=token)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f'Failed to process OIDC callback. Ensure proper OIDC configuration. Error: {str(e)}'
+        )
 
     request.session['user'] = {
         'sub': userinfo.get('sub'),
