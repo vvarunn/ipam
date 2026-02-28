@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from .db import engine, get_session, SessionLocal
 from .models import Base
@@ -55,6 +56,14 @@ def startup():
     setup_oauth()
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
+    try:
+        # Lightweight schema migration
+        db.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_readonly BOOLEAN NOT NULL DEFAULT FALSE;'))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"DEBUG: Migration skipped or failed: {e}")
+
     try:
         ensure_sites(db)
         ensure_indexes(db)

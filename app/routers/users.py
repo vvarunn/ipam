@@ -18,12 +18,14 @@ class UserCreate(BaseModel):
     password: str
     full_name: Optional[str] = None
     is_admin: bool = False
+    is_readonly: bool = False
 
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
     is_admin: Optional[bool] = None
+    is_readonly: Optional[bool] = None
 
 class UserPasswordUpdate(BaseModel):
     password: str
@@ -34,6 +36,7 @@ class UserResponse(BaseModel):
     email: Optional[str]
     full_name: Optional[str]
     is_admin: bool
+    is_readonly: bool
     is_active: bool
     
     class Config:
@@ -70,6 +73,7 @@ def create_user(
         hashed_password=hash_password(user_data.password),
         full_name=user_data.full_name,
         is_admin=user_data.is_admin,
+        is_readonly=user_data.is_readonly,
         is_active=True
     )
     db.add(user)
@@ -77,7 +81,8 @@ def create_user(
     
     audit(db, admin.get('username', 'admin'), 'CREATE_USER', 'user', user.id, None, {
         'username': user.username,
-        'is_admin': user.is_admin
+        'is_admin': user.is_admin,
+        'is_readonly': user.is_readonly
     })
     db.commit()
     
@@ -99,6 +104,7 @@ def update_user(
         'email': user.email,
         'full_name': user.full_name,
         'is_admin': user.is_admin,
+        'is_readonly': user.is_readonly,
         'is_active': user.is_active
     }
     
@@ -118,6 +124,9 @@ def update_user(
     
     if user_data.is_admin is not None:
         user.is_admin = user_data.is_admin
+        
+    if user_data.is_readonly is not None:
+        user.is_readonly = user_data.is_readonly
     
     db.flush()
     
@@ -125,6 +134,7 @@ def update_user(
         'email': user.email,
         'full_name': user.full_name,
         'is_admin': user.is_admin,
+        'is_readonly': user.is_readonly,
         'is_active': user.is_active
     })
     db.commit()

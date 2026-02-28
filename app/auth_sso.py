@@ -146,11 +146,46 @@ async def callback(request: Request, db: Session = Depends(get_session)):
             detail=f'Failed to process OIDC callback. Ensure proper OIDC configuration. Error: {str(e)}'
         )
 
+    sub = userinfo.get('sub')
+    email = userinfo.get('email')
+    name = userinfo.get('name') or userinfo.get('preferred_username')
+    groups = userinfo.get('groups', [])
+    
+    # JIT Provisioning / Update User
+    username = email if email else sub
+    if not username:
+        raise HTTPException(status_code=400, detail="Cannot determine username from OIDC token")
+        
+    user_db = db.scalar(select(User).where(User.username == username))
+    
+    if not user_db:
+        from .password import hash_password
+        user_db = User(
+            username=username,
+            email=email if email else None,
+            hashed_password=hash_password('sso_user'),
+            full_name=name,
+            is_active=True,
+            groups=groups
+        )
+        db.add(user_db)
+    else:
+        user_db.full_name = name
+        user_db.groups = groups
+        if email and not user_db.email:
+            user_db.email = email
+            
+    db.commit()
+    db.refresh(user_db)
+
     request.session['user'] = {
-        'sub': userinfo.get('sub'),
-        'email': userinfo.get('email'),
-        'name': userinfo.get('name') or userinfo.get('preferred_username'),
-        'groups': userinfo.get('groups', []),
+        'sub': str(user_db.id),
+        'email': user_db.email,
+        'name': user_db.full_name,
+        'username': user_db.username,
+        'groups': user_db.groups or ([os.getenv('ADMIN_GROUP', 'IPAM-Admins')] if user_db.is_admin else []),
+        'is_local': False,
+        'is_readonly': user_db.is_readonly
     }
     return RedirectResponse(url='/')
 
@@ -180,11 +215,38 @@ async def saml_acs(request: Request, db: Session = Depends(get_session)):
     name = attributes.get('name', [''])[0] or attributes.get('urn:oid:2.16.840.1.113730.3.1.241', [''])[0] or email
     groups = attributes.get('groups', []) or attributes.get('http://schemas.xmlsoap.org/claims/Group', [])
     
+    # JIT Provisioning / Update User
+    username = email if email else auth.get_nameid()
+    user_db = db.scalar(select(User).where(User.username == username))
+    
+    if not user_db:
+        from .password import hash_password
+        user_db = User(
+            username=username,
+            email=email if email else None,
+            hashed_password=hash_password('sso_user'),
+            full_name=name,
+            is_active=True,
+            groups=groups
+        )
+        db.add(user_db)
+    else:
+        user_db.full_name = name
+        user_db.groups = groups
+        if email and not user_db.email:
+            user_db.email = email
+            
+    db.commit()
+    db.refresh(user_db)
+    
     request.session['user'] = {
-        'sub': auth.get_nameid(),
-        'email': email,
-        'name': name,
-        'groups': groups,
+        'sub': str(user_db.id),
+        'email': user_db.email,
+        'name': user_db.full_name,
+        'username': user_db.username,
+        'groups': user_db.groups or ([os.getenv('ADMIN_GROUP', 'IPAM-Admins')] if user_db.is_admin else []),
+        'is_local': False,
+        'is_readonly': user_db.is_readonly
     }
     
     return RedirectResponse(url='/', status_code=303)
@@ -235,7 +297,8 @@ def local_login(login_data: LocalLoginRequest, request: Request, db: Session = D
         'name': user.full_name or user.username,
         'username': user.username,
         'groups': user.groups or ([os.getenv('ADMIN_GROUP', 'IPAM-Admins')] if user.is_admin else []),
-        'is_local': True
+        'is_local': True,
+        'is_readonly': user.is_readonly
     }
     
     return {'ok': True, 'message': 'Login successful'}

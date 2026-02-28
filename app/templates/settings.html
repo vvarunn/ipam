@@ -341,9 +341,22 @@
                 <label class="form-label">Email</label>
                 <input type="email" class="form-input" id="createEmail">
             </div>
-            <div class="form-group" style="display: flex; align-items: center; gap: var(--space-2);">
-                <input type="checkbox" id="createIsAdmin">
-                <label for="createIsAdmin">Grant Admin Privileges</label>
+            <div class="form-group">
+                <label class="form-label">Role</label>
+                <div style="display: flex; gap: var(--space-4); margin-top: var(--space-2);">
+                    <div style="display: flex; align-items: center; gap: var(--space-2);">
+                        <input type="radio" id="roleUser" name="createRole" value="user" checked>
+                        <label for="roleUser">Standard User</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-2);">
+                        <input type="radio" id="roleReadonly" name="createRole" value="readonly">
+                        <label for="roleReadonly">Read-Only</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-2);">
+                        <input type="radio" id="roleAdmin" name="createRole" value="admin">
+                        <label for="roleAdmin">Admin</label>
+                    </div>
+                </div>
             </div>
             <button class="btn btn-primary" onclick="createUser()">Create User</button>
             <div id="createUserMessage" style="margin-top: var(--space-4);"></div>
@@ -402,7 +415,7 @@
                     <td><strong>${user.username}</strong></td>
                     <td>${user.full_name || '-'}</td>
                     <td>${user.email || '-'}</td>
-                    <td><span class="badge ${user.is_admin ? 'badge-primary' : 'badge-secondary'}">${user.is_admin ? 'Admin' : 'User'}</span></td>
+                    <td><span class="badge ${user.is_admin ? 'badge-primary' : (user.is_readonly ? 'badge-info' : 'badge-secondary')}">${user.is_admin ? 'Admin' : (user.is_readonly ? 'Read-Only' : 'User')}</span></td>
                     <td><span class="badge ${user.is_active ? 'badge-success' : 'badge-danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
                     <td>
                         <button class="btn btn-sm btn-secondary" onclick="openResetPasswordModal(${user.id}, '${user.username}')" style="margin-right: 4px;">Reset Key</button>
@@ -429,7 +442,9 @@
         const password = document.getElementById('createPassword').value;
         const fullName = document.getElementById('createFullName').value;
         const email = document.getElementById('createEmail').value;
-        const isAdmin = document.getElementById('createIsAdmin').checked;
+        const selectedRole = document.querySelector('input[name="createRole"]:checked').value;
+        const isAdmin = selectedRole === 'admin';
+        const isReadonly = selectedRole === 'readonly';
 
         try {
             const response = await fetch('/api/users/', {
@@ -440,7 +455,8 @@
                     password,
                     full_name: fullName,
                     email,
-                    is_admin: isAdmin
+                    is_admin: isAdmin,
+                    is_readonly: isReadonly
                 })
             });
 

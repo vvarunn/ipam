@@ -4,7 +4,7 @@ from .models import User
 from .password import hash_password
 
 def create_user(db: Session, username: str, password: str, email: str | None = None, 
-                full_name: str | None = None, is_admin: bool = False) -> User:
+                full_name: str | None = None, is_admin: bool = False, is_readonly: bool = False) -> User:
     """Create a new user with hashed password."""
     # Check if user already exists
     existing = db.scalar(select(User).where(User.username == username))
@@ -23,6 +23,7 @@ def create_user(db: Session, username: str, password: str, email: str | None = N
         hashed_password=hash_password(password),
         full_name=full_name,
         is_admin=is_admin,
+        is_readonly=is_readonly,
         is_active=True,
         groups=[]
     )

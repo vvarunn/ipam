@@ -5,7 +5,7 @@ from ..db import get_session
 from ..schemas import IPCreate, HostnameUpdate
 from ..crud import search, create_ip_with_assignment, update_ip_hostname, ip_history
 from ..security import require_user
-from ..deps import require_admin, get_current_user
+from ..deps import require_admin, get_current_user, require_write_access
 from ..utils import actor_from_user
 
 router = APIRouter(prefix='/api', tags=['ip'])
@@ -32,8 +32,8 @@ def api_search(q: str = '', site: str | None = None, vlan_id: int | None = None,
     ]
 
 @router.post('/ip')
-def api_create_ip(payload: IPCreate, db: Session = Depends(get_session), user=Depends(get_current_user)):
-    """Create IP - available to all authenticated users"""
+def api_create_ip(payload: IPCreate, db: Session = Depends(get_session), user=Depends(require_write_access)):
+    """Create IP - available to all authenticated users with write access"""
     actor = payload.actor or actor_from_user(user)
     try:
         ip_id = create_ip_with_assignment(

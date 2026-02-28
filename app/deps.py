@@ -16,3 +16,10 @@ def get_current_user(request: Request):
     if not user:
         raise HTTPException(status_code=401, detail='Authentication required')
     return user
+
+def require_write_access(request: Request):
+    """Get current user from session, raise 403 if they are read-only"""
+    user = get_current_user(request)
+    if user.get('is_readonly', False) and not is_admin(user):
+        raise HTTPException(status_code=403, detail='Write access required')
+    return user
