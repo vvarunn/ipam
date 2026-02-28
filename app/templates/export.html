@@ -62,7 +62,42 @@
       </div>
 
       <button type="submit" class="btn btn-primary btn-lg">
-        <span class="btn-icon">📥</span> Download Export
+        <span class="btn-icon">📥</span> Download IP Export
+      </button>
+    </form>
+  </div>
+
+  <!-- VLAN Export Form -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">📥</span>
+        Export VLAN Data
+      </h2>
+    </div>
+    <form action="/api/export/vlan" method="get" class="form-modern">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+        <div class="form-group">
+          <label class="form-label">Site (Optional)</label>
+          <select class="form-select" name="site">
+            <option value="">All Sites</option>
+            <option value="DC">DC - Data Center</option>
+            <option value="DR">DR - Disaster Recovery</option>
+            <option value="UAT">UAT - User Acceptance Testing</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Export Format</label>
+          <select class="form-select" name="fmt">
+            <option value="csv">CSV (Comma Separated)</option>
+            <option value="xlsx">Excel (XLSX)</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg">
+        <span class="btn-icon">📥</span> Download VLAN Export
       </button>
     </form>
   </div>
