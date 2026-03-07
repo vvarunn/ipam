@@ -32,7 +32,8 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv('SESSION_SECRET', 'dev_secret'),
     https_only=False,
-    same_site='lax'
+    same_site='lax',
+    max_age=1800
 )
 
 # Mount static files
