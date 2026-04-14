@@ -246,10 +246,10 @@ def run_update_script():
     # Fallback to docker-compose if docker compose is missing
     if docker compose version > /dev/null 2>&1; then
         docker compose -p ipam build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg HTTP_PROXY=$HTTP_PROXY --build-arg HTTPS_PROXY=$HTTPS_PROXY app >> update_status.txt 2>&1
-        docker compose -p ipam up -d >> update_status.txt 2>&1
+        docker run -d --rm --name ipam_updater --volumes-from ipam_app -v /var/run/docker.sock:/var/run/docker.sock ipam-app:latest bash -c 'sleep 3 && cd /host_src && docker compose -p ipam up -d >> update_status.txt 2>&1'
     else
         docker-compose -p ipam build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg HTTP_PROXY=$HTTP_PROXY --build-arg HTTPS_PROXY=$HTTPS_PROXY app >> update_status.txt 2>&1
-        docker-compose -p ipam up -d >> update_status.txt 2>&1
+        docker run -d --rm --name ipam_updater --volumes-from ipam_app -v /var/run/docker.sock:/var/run/docker.sock ipam-app:latest bash -c 'sleep 3 && cd /host_src && docker-compose -p ipam up -d >> update_status.txt 2>&1'
     fi
     
     echo -e "\\nUpdate process initiated. Containers will restart shortly." >> update_status.txt
@@ -334,9 +334,9 @@ def run_zip_update_script(zip_path: str):
         echo -e "\\n> Restarting application stack..." >> update_status.txt
         # Fallback to docker-compose if docker compose is missing
         if docker compose version > /dev/null 2>&1; then
-            docker compose -p ipam up -d --no-build >> update_status.txt 2>&1
+            docker run -d --rm --name ipam_updater --volumes-from ipam_app -v /var/run/docker.sock:/var/run/docker.sock ipam-app:latest bash -c 'sleep 3 && cd /host_src && docker compose -p ipam up -d --no-build >> update_status.txt 2>&1'
         else
-            docker-compose -p ipam up -d --no-build >> update_status.txt 2>&1
+            docker run -d --rm --name ipam_updater --volumes-from ipam_app -v /var/run/docker.sock:/var/run/docker.sock ipam-app:latest bash -c 'sleep 3 && cd /host_src && docker-compose -p ipam up -d --no-build >> update_status.txt 2>&1'
         fi
         echo -e "\\nUpdate process initiated. Containers will restart shortly." >> update_status.txt
         """
