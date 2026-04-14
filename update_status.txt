@@ -56,3 +56,9 @@ Already up to date.
 #12 exporting manifest list sha256:a0b5f573e2984f9875c748da80b787beb4b9f1753cfc5ebe98d92f653aa3e4b5 0.0s done
 #12 naming to docker.io/library/ipam-app:latest done
 #12 unpacking to docker.io/library/ipam-app:latest
+#12 unpacking to docker.io/library/ipam-app:latest 29.6s done
+#12 DONE 30.7s
+ Container ipam_pg  Creating
+Error response from daemon: Conflict. The container name "/ipam_pg" is already in use by container "fe1a7c53986ab8afa62eeb2ddf2981af27ac701f19b7f9bb1cfe308fb487f3d8". You have to remove (or rename) that container to be able to reuse that name.
+
+Update process initiated. Containers will restart shortly.
