@@ -14,6 +14,10 @@ from app.models import Settings
 from app.deps import require_admin
 from app.crud import audit
 
+def get_status_file_path() -> str:
+    host_dir = '/host_src'
+    return os.path.join(host_dir, 'update_status.txt') if os.path.exists(host_dir) else 'update_status.txt'
+
 router = APIRouter(prefix='/api/settings', tags=['settings'])
 
 class SSOSettings(BaseModel):
@@ -256,7 +260,7 @@ def run_update_script():
     except Exception as e:
         print(f"Error starting update script: {e}")
         try:
-            with open('update_status.txt', 'a') as f:
+            with open(get_status_file_path(), 'a') as f:
                 f.write(f"\\nError starting update script: {e}\\n")
         except:
             pass
@@ -269,7 +273,7 @@ def trigger_app_update(
     """Trigger application update from GitHub (admin only)"""
     # Create or clear the status file before starting
     try:
-        with open('update_status.txt', 'w') as f:
+        with open(get_status_file_path(), 'w') as f:
             f.write("Initializing update sequence...\\n")
     except Exception:
         pass
@@ -283,8 +287,8 @@ def get_update_status(
 ):
     """Get the current output of the application update script (admin only)"""
     try:
-        if os.path.exists('update_status.txt'):
-            with open('update_status.txt', 'r') as f:
+        if os.path.exists(get_status_file_path()):
+            with open(get_status_file_path(), 'r') as f:
                 content = f.read()
             return {'ok': True, 'status': content}
         else:
@@ -300,7 +304,7 @@ def run_zip_update_script(zip_path: str):
         
     def log_status(msg):
         try:
-            with open('update_status.txt', 'a') as f:
+            with open(get_status_file_path(), 'a') as f:
                 f.write(f"{msg}\\n")
         except:
             pass
@@ -362,7 +366,7 @@ def trigger_zip_app_update(
         
     # Create or clear the status file before starting
     try:
-        with open('update_status.txt', 'w') as f:
+        with open(get_status_file_path(), 'w') as f:
             f.write("Initializing update sequence via Zip upload...\\n")
     except Exception:
         pass

@@ -1,102 +1,58 @@
-Starting update process at Sun Feb 22 09:10:07 UTC 2026...
+Starting update process at Tue Apr 14 07:41:50 UTC 2026...
 Working directory: /host_src
 
-> Pulling latest changes from GitHub...
+> Detected Git repository. Pulling latest changes from GitHub...
 From https://github.com/vvarunn/ipam
  * branch            main       -> FETCH_HEAD
 Already up to date.
 
 > Rebuilding containers...
-unknown flag: --build
-See 'docker --help'.
+#0 building with "default" instance using docker driver
 
-Usage:  docker [OPTIONS] COMMAND
+#1 [app internal] load build definition from Dockerfile
+#1 transferring dockerfile: 978B 0.0s done
+#1 DONE 0.1s
 
-A self-sufficient runtime for containers
+#2 [app internal] load metadata for docker.io/library/python:3.11-slim
+#2 DONE 3.0s
 
-Common Commands:
-  run         Create and run a new container from an image
-  exec        Execute a command in a running container
-  ps          List containers
-  build       Build an image from a Dockerfile
-  pull        Download an image from a registry
-  push        Upload an image to a registry
-  images      List images
-  login       Log in to a registry
-  logout      Log out from a registry
-  search      Search Docker Hub for images
-  version     Show the Docker version information
-  info        Display system-wide information
+#3 [app internal] load .dockerignore
+#3 transferring context: 2B 0.0s done
+#3 DONE 0.1s
 
-Management Commands:
-  builder     Manage builds
-  buildx*     Docker Buildx
-  container   Manage containers
-  context     Manage contexts
-  image       Manage images
-  manifest    Manage Docker image manifests and manifest lists
-  network     Manage networks
-  plugin      Manage plugins
-  system      Manage Docker
-  trust       Manage trust on Docker images
-  volume      Manage volumes
+#4 [app 1/7] FROM docker.io/library/python:3.11-slim@sha256:233de06753d30d120b1a3ce359d8d3be8bda78524cd8f520c99883bfe33964cf
+#4 resolve docker.io/library/python:3.11-slim@sha256:233de06753d30d120b1a3ce359d8d3be8bda78524cd8f520c99883bfe33964cf 0.1s done
+#4 DONE 0.1s
 
-Swarm Commands:
-  swarm       Manage Swarm
+#5 [app internal] load build context
+#5 transferring context: 1.51MB 1.1s done
+#5 DONE 1.2s
 
-Commands:
-  attach      Attach local standard input, output, and error streams to a running container
-  commit      Create a new image from a container's changes
-  cp          Copy files/folders between a container and the local filesystem
-  create      Create a new container
-  diff        Inspect changes to files or directories on a container's filesystem
-  events      Get real time events from the server
-  export      Export a container's filesystem as a tar archive
-  history     Show the history of an image
-  import      Import the contents from a tarball to create a filesystem image
-  inspect     Return low-level information on Docker objects
-  kill        Kill one or more running containers
-  load        Load an image from a tar archive or STDIN
-  logs        Fetch the logs of a container
-  pause       Pause all processes within one or more containers
-  port        List port mappings or a specific mapping for the container
-  rename      Rename a container
-  restart     Restart one or more containers
-  rm          Remove one or more containers
-  rmi         Remove one or more images
-  save        Save one or more images to a tar archive (streamed to STDOUT by default)
-  start       Start one or more stopped containers
-  stats       Display a live stream of container(s) resource usage statistics
-  stop        Stop one or more running containers
-  tag         Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
-  top         Display the running processes of a container
-  unpause     Unpause all processes within one or more containers
-  update      Update configuration of one or more containers
-  wait        Block until one or more containers stop, then print their exit codes
+#6 [app 3/7] RUN apt-get update && apt-get install -y     gcc     postgresql-client     git     docker.io     curl     && rm -rf /var/lib/apt/lists/*
+#6 CACHED
 
-Global Options:
-      --config string      Location of client config files (default
-                           "/root/.docker")
-  -c, --context string     Name of the context to use to connect to the
-                           daemon (overrides DOCKER_HOST env var and
-                           default context set with "docker context use")
-  -D, --debug              Enable debug mode
-  -H, --host list          Daemon socket to connect to
-  -l, --log-level string   Set the logging level ("debug", "info",
-                           "warn", "error", "fatal") (default "info")
-      --tls                Use TLS; implied by --tlsverify
-      --tlscacert string   Trust certs signed only by this CA (default
-                           "/root/.docker/ca.pem")
-      --tlscert string     Path to TLS certificate file (default
-                           "/root/.docker/cert.pem")
-      --tlskey string      Path to TLS key file (default
-                           "/root/.docker/key.pem")
-      --tlsverify          Use TLS and verify the remote
-  -v, --version            Print version information and quit
+#7 [app 4/7] RUN mkdir -p /usr/local/lib/docker/cli-plugins     && curl -SL https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose     && chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+#7 CACHED
 
-Run 'docker COMMAND --help' for more information on a command.
+#8 [app 5/7] COPY requirements.txt .
+#8 CACHED
 
-For more help on how to use Docker, head to https://docs.docker.com/go/guides/
+#9 [app 2/7] WORKDIR /app
+#9 CACHED
 
+#10 [app 6/7] RUN pip install --no-cache-dir -r requirements.txt
+#10 CACHED
 
-Update process initiated. Containers will restart shortly.
+#11 [app 7/7] COPY app/ ./app/
+#11 DONE 0.5s
+
+#12 [app] exporting to image
+#12 exporting layers
+#12 exporting layers 0.4s done
+#12 exporting manifest sha256:ffd2fafd7534b9965be2dc27f96d6aa3f229a16c61e20580a90c97927d0e3283 0.0s done
+#12 exporting config sha256:133d956ad73023e77a588a5f68c0a91fb54723aee05969b2d951f7caff4e6a2d 0.0s done
+#12 exporting attestation manifest sha256:c05847ee7bb69c39942df764ffbc80ceb724e1c077b8e0ac05004390b57bb7c2 0.0s done
+#12 exporting manifest list sha256:a0b5f573e2984f9875c748da80b787beb4b9f1753cfc5ebe98d92f653aa3e4b5
+#12 exporting manifest list sha256:a0b5f573e2984f9875c748da80b787beb4b9f1753cfc5ebe98d92f653aa3e4b5 0.0s done
+#12 naming to docker.io/library/ipam-app:latest done
+#12 unpacking to docker.io/library/ipam-app:latest
