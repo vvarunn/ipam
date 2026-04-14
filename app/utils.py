@@ -46,6 +46,9 @@ def actor_from_user(user: dict | None) -> str:
 def is_admin(user: dict | None) -> bool:
     if not user:
         return False
+    # Manual DB override takes precedence
+    if user.get('is_admin'):
+        return True
     admin_group = os.getenv('ADMIN_GROUP', 'IPAM-Admins')
     groups = user.get('groups') or []
     return admin_group in groups

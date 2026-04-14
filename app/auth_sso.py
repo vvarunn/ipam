@@ -185,6 +185,7 @@ async def callback(request: Request, db: Session = Depends(get_session)):
         'username': user_db.username,
         'groups': user_db.groups or ([os.getenv('ADMIN_GROUP', 'IPAM-Admins')] if user_db.is_admin else []),
         'is_local': False,
+        'is_admin': user_db.is_admin,
         'is_readonly': user_db.is_readonly
     }
     return RedirectResponse(url='/')
@@ -246,6 +247,7 @@ async def saml_acs(request: Request, db: Session = Depends(get_session)):
         'username': user_db.username,
         'groups': user_db.groups or ([os.getenv('ADMIN_GROUP', 'IPAM-Admins')] if user_db.is_admin else []),
         'is_local': False,
+        'is_admin': user_db.is_admin,
         'is_readonly': user_db.is_readonly
     }
     
@@ -298,6 +300,7 @@ def local_login(login_data: LocalLoginRequest, request: Request, db: Session = D
         'username': user.username,
         'groups': user.groups or ([os.getenv('ADMIN_GROUP', 'IPAM-Admins')] if user.is_admin else []),
         'is_local': True,
+        'is_admin': user.is_admin,
         'is_readonly': user.is_readonly
     }
     
