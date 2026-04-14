@@ -245,11 +245,11 @@ def run_update_script():
     echo -e "\\n> Rebuilding containers..." >> update_status.txt
     # Fallback to docker-compose if docker compose is missing
     if docker compose version > /dev/null 2>&1; then
-        docker compose build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg HTTP_PROXY=$HTTP_PROXY --build-arg HTTPS_PROXY=$HTTPS_PROXY app >> update_status.txt 2>&1
-        docker compose up -d >> update_status.txt 2>&1
+        docker compose -p ipam build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg HTTP_PROXY=$HTTP_PROXY --build-arg HTTPS_PROXY=$HTTPS_PROXY app >> update_status.txt 2>&1
+        docker compose -p ipam up -d >> update_status.txt 2>&1
     else
-        docker-compose build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg HTTP_PROXY=$HTTP_PROXY --build-arg HTTPS_PROXY=$HTTPS_PROXY app >> update_status.txt 2>&1
-        docker-compose up -d >> update_status.txt 2>&1
+        docker-compose -p ipam build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg HTTP_PROXY=$HTTP_PROXY --build-arg HTTPS_PROXY=$HTTPS_PROXY app >> update_status.txt 2>&1
+        docker-compose -p ipam up -d >> update_status.txt 2>&1
     fi
     
     echo -e "\\nUpdate process initiated. Containers will restart shortly." >> update_status.txt
@@ -332,7 +332,12 @@ def run_zip_update_script(zip_path: str):
         fi
         
         echo -e "\\n> Restarting application stack..." >> update_status.txt
-        docker compose up -d --no-build >> update_status.txt 2>&1
+        # Fallback to docker-compose if docker compose is missing
+        if docker compose version > /dev/null 2>&1; then
+            docker compose -p ipam up -d --no-build >> update_status.txt 2>&1
+        else
+            docker-compose -p ipam up -d --no-build >> update_status.txt 2>&1
+        fi
         echo -e "\\nUpdate process initiated. Containers will restart shortly." >> update_status.txt
         """
         
