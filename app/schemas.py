@@ -31,3 +31,21 @@ class VlanUpdate(BaseModel):
     cidr: Optional[str] = None
     gateway: Optional[str] = None
     description: Optional[str] = None
+
+class PublicIPCreate(BaseModel):
+    public_ip: str
+    private_ip: Optional[str] = None
+    fqdn: Optional[str] = None
+    owner: Optional[str] = None
+    status: str = 'allocated'
+    notes: Optional[str] = None
+    actor: str = Field(default='api_user')
+
+class PublicIPUpdate(BaseModel):
+    private_ip: Optional[str] = None
+    fqdn: Optional[str] = None
+    owner: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    actor: str = Field(default='api_user')
+

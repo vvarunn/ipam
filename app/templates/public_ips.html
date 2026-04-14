@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Public IPs - IPAM{% endblock %}
+
+{% block extra_css %}
+<style>
+  .search-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .search-form {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .search-form .form-input,
+  .search-form .form-select {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .btn-icon {
+    font-size: 18px;
+    margin-right: var(--space-2);
+  }
+
+  .table-actions {
+    display: flex;
+    gap: var(--space-2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-modern">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Public IPs</h1>
+    <p class="page-subtitle">Manage your public IP address inventory</p>
+  </div>
+
+  <!-- Add IP Form -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">➕</span>
+        Add New Public IP
+      </h2>
+    </div>
+    <div class="form-modern">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+        <div class="form-group">
+          <label class="form-label">Public IP</label>
+          <input type="text" class="form-input" id="newPublicIp" placeholder="e.g., 203.0.113.10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Private IP (Optional)</label>
+          <input type="text" class="form-input" id="newPrivateIp" placeholder="e.g., 10.0.0.10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">FQDN / Domain</label>
+          <input type="text" class="form-input" id="newFqdn" placeholder="e.g., app.example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Owner</label>
+          <input type="text" class="form-input" id="newOwner" placeholder="e.g., Network Team">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="newStatus">
+            <option value="allocated">Allocated</option>
+            <option value="reserved">Reserved</option>
+            <option value="free">Free</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (Optional)</label>
+        <input type="text" class="form-input" id="newNotes" placeholder="Add any notes">
+      </div>
+      <button class="btn btn-primary" onclick="addPublicIP()">
+        <span class="btn-icon">➕</span> Add Public IP
+      </button>
+      <div id="addMessage" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+
+  <!-- Search Form -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">🔍</span>
+        Search Public IPs
+      </h2>
+    </div>
+    <form method="get" class="search-form">
+      <input name="q" value="{{ q }}" class="form-input" placeholder="Search IP, FQDN, owner..." />
+      <select name="status" class="form-select" style="max-width: 200px;">
+        <option value="" {% if not status %}selected{% endif %}>All Statuses</option>
+        <option value="allocated" {% if status=='allocated' %}selected{% endif %}>Allocated</option>
+        <option value="reserved" {% if status=='reserved' %}selected{% endif %}>Reserved</option>
+        <option value="free" {% if status=='free' %}selected{% endif %}>Free</option>
+      </select>
+      <button type="submit" class="btn btn-primary">
+        <span class="btn-icon">🔍</span> Search
+      </button>
+    </form>
+  </div>
+
+  <!-- Results Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-title-icon">📋</span>
+        Public IPs Registry
+      </h2>
+    </div>
+    <div style="overflow-x: auto;">
+      <table class="table-modern">
+        <thead>
+          <tr>
+            <th>Public IP</th>
+            <th>Private IP</th>
+            <th>FQDN / Domain</th>
+            <th>Owner</th>
+            <th>Status</th>
+            <th>Notes</th>
+            {% if is_admin %}<th>Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% if rows %}
+          {% for p in rows %}
+          <tr>
+            <td><code style="font-weight: 600;">{{ p.public_ip }}</code></td>
+            <td>{% if p.private_ip %}<code style="color: var(--text-secondary);">{{ p.private_ip }}</code>{% else %}-{% endif %}</td>
+            <td>{{ p.fqdn if p.fqdn else '-' }}</td>
+            <td>{{ p.owner if p.owner else '-' }}</td>
+            <td>
+              <span
+                class="badge badge-{{ 'success' if p.status == 'allocated' else ('warning' if p.status == 'reserved' else 'info') }}">
+                {{ p.status }}
+              </span>
+            </td>
+            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ p.notes if p.notes else '' }}">
+              {{ p.notes if p.notes else '' }}
+            </td>
+            {% if is_admin %}
+            <td>
+              <div class="table-actions">
+                <button class="btn btn-sm btn-secondary"
+                  onclick="editPublicIP({{ p.id }}, '{{ p.public_ip }}', '{{ p.private_ip if p.private_ip else '' }}', '{{ p.fqdn if p.fqdn else '' }}', '{{ p.owner if p.owner else '' }}', '{{ p.status }}', '{{ p.notes if p.notes else '' }}')">
+                  ✏️ Edit
+                </button>
+                <button class="btn btn-sm btn-danger"
+                  onclick="deletePublicIP({{ p.id }}, '{{ p.public_ip }}')">
+                  🗑️ Delete
+                </button>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="{% if is_admin %}7{% else %}6{% endif %}" style="text-align: center; padding: var(--space-8);">
+              <div style="font-size: 48px; margin-bottom: var(--space-4); opacity: 0.3;">🔍</div>
+              <p style="color: var(--text-secondary);">No results found. Try a different search query.</p>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Edit IP Modal -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Edit Public IP Address</h3>
+      <span class="close" onclick="closeEditModal()">&times;</span>
+    </div>
+    <div class="form-modern">
+      <div class="form-group">
+        <label class="form-label">Public IP</label>
+        <input type="text" class="form-input" id="editPublicIp" readonly style="opacity: 0.7; cursor: not-allowed;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Private IP</label>
+        <input type="text" class="form-input" id="editPrivateIp">
+      </div>
+      <div class="form-group">
+        <label class="form-label">FQDN / Domain</label>
+        <input type="text" class="form-input" id="editFqdn">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Owner</label>
+        <input type="text" class="form-input" id="editOwner">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="editStatus">
+          <option value="allocated">Allocated</option>
+          <option value="reserved">Reserved</option>
+          <option value="free">Free</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="editNotes" rows="3"></textarea>
+      </div>
+      <div style="display: flex; gap: var(--space-3);">
+        <button class="btn btn-primary" onclick="savePublicIP()">💾 Save Changes</button>
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+      </div>
+      <div id="editMessage" style="margin-top: var(--space-4);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete IP Confirmation Modal -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content" style="max-width: 450px;">
+    <div class="modal-header">
+      <h3>Delete Public IP</h3>
+      <span class="close" onclick="closeDeleteModal()">&times;</span>
+    </div>
+    <div>
+      <p id="deleteText" style="margin-bottom: var(--space-6); color: var(--text-secondary);"></p>
+      <div style="display: flex; gap: var(--space-3);">
+        <button class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete</button>
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let currentIpId = null;
+
+  async function addPublicIP() {
+    const publicIp = document.getElementById('newPublicIp').value.trim();
+    const privateIp = document.getElementById('newPrivateIp').value.trim();
+    const fqdn = document.getElementById('newFqdn').value.trim();
+    const owner = document.getElementById('newOwner').value.trim();
+    const notes = document.getElementById('newNotes').value.trim();
+    const status = document.getElementById('newStatus').value;
+
+    if (!publicIp) {
+      showMessage('addMessage', '⚠️ Public IP address is required', 'danger');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/public-ip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          public_ip: publicIp,
+          private_ip: privateIp || null,
+          fqdn: fqdn || null,
+          owner: owner || null,
+          notes: notes || null,
+          status: status
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showMessage('addMessage', '✓ Public IP added successfully!', 'success');
+        document.getElementById('newPublicIp').value = '';
+        document.getElementById('newPrivateIp').value = '';
+        document.getElementById('newFqdn').value = '';
+        document.getElementById('newOwner').value = '';
+        document.getElementById('newNotes').value = '';
+        document.getElementById('newStatus').value = 'allocated';
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showMessage('addMessage', '✗ ' + (result.detail || 'Failed to add Public IP'), 'danger');
+      }
+    } catch (error) {
+      showMessage('addMessage', '✗ Error: ' + error.message, 'danger');
+    }
+  }
+
+  function editPublicIP(ipId, publicIp, privateIp, fqdn, owner, status, notes) {
+    currentIpId = ipId;
+    document.getElementById('editPublicIp').value = publicIp;
+    document.getElementById('editPrivateIp').value = privateIp;
+    document.getElementById('editFqdn').value = fqdn;
+    document.getElementById('editOwner').value = owner;
+    document.getElementById('editStatus').value = status;
+    document.getElementById('editNotes').value = notes;
+    document.getElementById('editModal').style.display = 'block';
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    currentIpId = null;
+    document.getElementById('editMessage').innerHTML = '';
+  }
+
+  async function savePublicIP() {
+    if (!currentIpId) return;
+
+    const privateIp = document.getElementById('editPrivateIp').value.trim();
+    const fqdn = document.getElementById('editFqdn').value.trim();
+    const owner = document.getElementById('editOwner').value.trim();
+    const status = document.getElementById('editStatus').value;
+    const notes = document.getElementById('editNotes').value.trim();
+
+    try {
+      const response = await fetch(`/api/public-ip/${currentIpId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          private_ip: privateIp || null,
+          fqdn: fqdn || null,
+          owner: owner || null,
+          status: status,
+          notes: notes || null
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showMessage('editMessage', '✓ IP updated successfully!', 'success');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showMessage('editMessage', '✗ ' + (result.detail || 'Failed to update IP'), 'danger');
+      }
+    } catch (error) {
+      showMessage('editMessage', '✗ Error: ' + error.message, 'danger');
+    }
+  }
+
+  function showMessage(elementId, text, type) {
+    const colors = {
+      success: 'var(--success-light)',
+      danger: 'var(--danger-light)',
+      warning: 'var(--warning-light)'
+    };
+    const textColors = {
+      success: 'var(--success-dark)',
+      danger: 'var(--danger-dark)',
+      warning: 'var(--warning-dark)'
+    };
+
+    const msg = document.getElementById(elementId);
+    msg.innerHTML = text;
+    msg.style.cssText = `
+            background: ${colors[type]};
+            color: ${textColors[type]};
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-lg);
+            border: 1px solid ${textColors[type]};
+            font-weight: 500;
+        `;
+  }
+
+  // Close modal when clicking outside
+  window.onclick = function (event) {
+    const modal = document.getElementById('editModal');
+    if (event.target == modal) {
+      closeEditModal();
+    }
+  }
+
+  let deleteIpId = null;
+
+  function deletePublicIP(id, ip) {
+    deleteIpId = id;
+    document.getElementById('deleteText').textContent =
+      `Are you sure you want to delete Public IP ${ip}? This action cannot be undone.`;
+    document.getElementById('deleteModal').style.display = 'block';
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    deleteIpId = null;
+  }
+
+  async function confirmDelete() {
+    if (!deleteIpId) return;
+
+    try {
+      const response = await fetch(`/api/public-ip/${deleteIpId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        closeDeleteModal();
+        window.location.reload();
+      } else {
+        const result = await response.json();
+        alert('Failed to delete IP: ' + (result.detail || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('Error deleting IP: ' + error.message);
+    }
+  }
+
+</script>
+{% endblock %}

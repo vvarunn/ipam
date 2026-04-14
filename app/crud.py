@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_, text, Text
-from .models import Site, VLAN, IPAddress, IPAssignment, AuditLog
+from .models import Site, VLAN, IPAddress, IPAssignment, AuditLog, PublicIP
 from .utils import infer_site_code
 
 
@@ -185,3 +185,99 @@ def fix_ip_sites_and_vlans(db: Session):
     except Exception as e:
         print(f"Startup check: Error fixing IP sites and VLANs: {e}")
         db.rollback()
+
+
+def search_public_ips(db: Session, q: str = '', status: str | None = None):
+    stmt = select(PublicIP)
+    
+    if status:
+        stmt = stmt.where(PublicIP.status == status)
+        
+    if q:
+        like = f'%{q}%'
+        stmt = stmt.where(or_(
+            PublicIP.public_ip.cast(Text).ilike(like),
+            PublicIP.private_ip.cast(Text).ilike(like),
+            PublicIP.fqdn.ilike(like),
+            PublicIP.owner.ilike(like),
+            PublicIP.notes.ilike(like)
+        ))
+        
+    results = db.execute(stmt.order_by(PublicIP.public_ip)).scalars().all()
+    return results
+
+def create_public_ip(db: Session, actor: str, public_ip: str, private_ip: str | None = None,
+                     fqdn: str | None = None, owner: str | None = None, status: str = 'allocated',
+                     notes: str | None = None):
+    if db.scalar(select(PublicIP).where(PublicIP.public_ip == public_ip)):
+        raise ValueError('Public IP already exists')
+
+    ip_obj = PublicIP(
+        public_ip=public_ip, 
+        private_ip=private_ip, 
+        fqdn=fqdn, 
+        owner=owner, 
+        status=status,
+        notes=notes
+    )
+    db.add(ip_obj)
+    db.flush()
+    
+    audit(db, actor, 'CREATE_PUBLIC_IP', 'public_ip', ip_obj.id, None, {
+        'public_ip': public_ip, 'private_ip': private_ip, 'fqdn': fqdn, 'owner': owner, 'status': status
+    })
+    db.commit()
+    return ip_obj.id
+
+def update_public_ip(db: Session, actor: str, public_ip_id: int, private_ip: str | None = None,
+                     fqdn: str | None = None, owner: str | None = None, status: str | None = None,
+                     notes: str | None = None):
+    ip_obj = db.get(PublicIP, public_ip_id)
+    if not ip_obj:
+        raise ValueError('Public IP not found')
+
+    old_val = {
+        'private_ip': ip_obj.private_ip,
+        'fqdn': ip_obj.fqdn,
+        'owner': ip_obj.owner,
+        'status': ip_obj.status,
+        'notes': ip_obj.notes
+    }
+
+    if private_ip is not None: ip_obj.private_ip = private_ip
+    if fqdn is not None: ip_obj.fqdn = fqdn
+    if owner is not None: ip_obj.owner = owner
+    if status is not None: ip_obj.status = status
+    if notes is not None: ip_obj.notes = notes
+
+    db.flush()
+    
+    new_val = {
+        'private_ip': ip_obj.private_ip,
+        'fqdn': ip_obj.fqdn,
+        'owner': ip_obj.owner,
+        'status': ip_obj.status,
+        'notes': ip_obj.notes
+    }
+    
+    audit(db, actor, 'UPDATE_PUBLIC_IP', 'public_ip', ip_obj.id, old_val, new_val)
+    db.commit()
+    return ip_obj.id
+
+def delete_public_ip(db: Session, actor: str, public_ip_id: int):
+    ip_obj = db.get(PublicIP, public_ip_id)
+    if not ip_obj:
+        raise ValueError('Public IP not found')
+        
+    old_val = {
+        'public_ip': str(ip_obj.public_ip),
+        'private_ip': str(ip_obj.private_ip) if ip_obj.private_ip else None,
+        'fqdn': ip_obj.fqdn,
+        'owner': ip_obj.owner,
+        'status': ip_obj.status
+    }
+    
+    db.delete(ip_obj)
+    audit(db, actor, 'DELETE_PUBLIC_IP', 'public_ip', public_ip_id, old_val, None)
+    db.commit()
+

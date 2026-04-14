@@ -43,6 +43,11 @@
                     📡
                     <span class="tooltip">VLANs</span>
                 </a>
+                <a href="/public-ips" class="icon-sidebar-link {% if request.path == '/public-ips' %}active{% endif %}"
+                    title="Public IPs">
+                    🌐
+                    <span class="tooltip">Public IPs</span>
+                </a>
                 {% if is_admin %}
                 <a href="/bulk" class="icon-sidebar-link {% if request.path == '/bulk' %}active{% endif %}"
                     title="Bulk Import">

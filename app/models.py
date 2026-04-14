@@ -78,3 +78,15 @@ class Settings(Base):
     encrypted = Column(Boolean, nullable=False, default=False)
     updated_by = Column(String(100))
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+class PublicIP(Base):
+    __tablename__ = 'public_ip'
+    id = Column(Integer, primary_key=True)
+    public_ip = Column(INET, unique=True, nullable=False)
+    private_ip = Column(INET)
+    fqdn = Column(String(255))
+    owner = Column(String(100))
+    status = Column(String(20), nullable=False, default='allocated')
+    notes = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

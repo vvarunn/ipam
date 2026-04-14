@@ -22,6 +22,7 @@ from .routers.dashboard import router as dashboard_router
 from .routers.users import router as users_router
 from .routers.settings import router as settings_router
 from .routers.audit import router as audit_router
+from .routers.public_ip import router as public_ip_router
 
 APP_TITLE = os.getenv('APP_TITLE', 'IPAM')
 __version__ = "1.1.0"
@@ -152,3 +153,4 @@ app.include_router(dashboard_router)
 app.include_router(users_router)
 app.include_router(settings_router)
 app.include_router(audit_router)
+app.include_router(public_ip_router)
