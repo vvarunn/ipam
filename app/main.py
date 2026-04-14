@@ -25,7 +25,7 @@ from .routers.audit import router as audit_router
 from .routers.public_ip import router as public_ip_router
 
 APP_TITLE = os.getenv('APP_TITLE', 'IPAM')
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 app = FastAPI(title=APP_TITLE, version=__version__)
 
