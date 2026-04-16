@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}About - IP Hub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .about-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 70vh;
+        padding: var(--space-6);
+    }
+
+    .about-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-xl);
+        padding: var(--space-8);
+        max-width: 520px;
+        width: 100%;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    .about-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+    }
+
+    .about-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto var(--space-4);
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border-radius: var(--radius-xl);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+        animation: logoPulse 3s ease-in-out infinite;
+    }
+
+    .about-logo img {
+        width: 48px;
+        height: 48px;
+        filter: brightness(0) invert(1);
+    }
+
+    @keyframes logoPulse {
+        0%, 100% { box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3); }
+        50% { box-shadow: 0 4px 24px rgba(99, 102, 241, 0.5); }
+    }
+
+    .about-app-name {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: var(--space-1);
+        letter-spacing: -0.5px;
+    }
+
+    .about-version {
+        display: inline-block;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 3px 12px;
+        border-radius: 999px;
+        margin-bottom: var(--space-6);
+        letter-spacing: 0.5px;
+    }
+
+    .about-divider {
+        width: 60px;
+        height: 2px;
+        background: var(--border-light);
+        margin: 0 auto var(--space-6);
+        border-radius: 1px;
+    }
+
+    .about-details {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        margin-bottom: var(--space-6);
+    }
+
+    .about-detail-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-3) var(--space-4);
+        background: var(--bg-secondary);
+        border-radius: var(--radius-lg);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .about-detail-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .about-detail-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    .about-detail-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .about-footer {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        line-height: 1.6;
+    }
+
+    .about-footer a {
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .about-footer a:hover {
+        text-decoration: underline;
+    }
+
+    .about-copyright {
+        margin-top: var(--space-4);
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border-light);
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="about-container">
+    <div class="about-card">
+        <div class="about-logo">
+            <img src="/static/images/logo.png" alt="IP Hub" onerror="this.outerHTML='🌐'">
+        </div>
+
+        <div class="about-app-name">IP Hub</div>
+        <div class="about-version">v{{ app_version }}</div>
+
+        <div class="about-divider"></div>
+
+        <div class="about-details">
+            <div class="about-detail-item">
+                <span class="about-detail-label">🏢 Company</span>
+                <span class="about-detail-value">IPMatrix</span>
+            </div>
+            <div class="about-detail-item">
+                <span class="about-detail-label">👨‍💻 Developer</span>
+                <span class="about-detail-value">Varun Naik</span>
+            </div>
+            <div class="about-detail-item">
+                <span class="about-detail-label">📦 Version</span>
+                <span class="about-detail-value">{{ app_version }}</span>
+            </div>
+            <div class="about-detail-item">
+                <span class="about-detail-label">⚙️ Framework</span>
+                <span class="about-detail-value">FastAPI + Jinja2</span>
+            </div>
+        </div>
+
+        <div class="about-footer">
+            A modern IP Address Management solution built for<br>
+            enterprise network teams.
+        </div>
+
+        <div class="about-copyright">
+            © {{ 2026 }} IPMatrix. All rights reserved.
+        </div>
+    </div>
+</div>
+{% endblock %}

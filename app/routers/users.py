@@ -88,18 +88,23 @@ def create_user(
     
     return user
 
-@router.put('/{user_id}', response_model=UserResponse)
-def update_user(
-    user_id: int,
+@router.put('/by-username/{username}', response_model=UserResponse)
+def update_user_by_username(
+    username: str,
     user_data: UserUpdate,
     db: Session = Depends(get_session),
     admin: dict = Depends(require_admin)
 ):
-    """Update user details (admin only)"""
-    user = db.get(User, user_id)
+    """Update user details by username (admin only). Useful for SSO users."""
+    user = db.scalar(select(User).where(User.username == username))
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
     
+    # Delegate to the shared update logic
+    return _apply_user_update(user, user_data, db, admin)
+
+def _apply_user_update(user: User, user_data: UserUpdate, db: Session, admin: dict):
+    """Shared logic for updating a user's details."""
     old_data = {
         'email': user.email,
         'full_name': user.full_name,
@@ -111,7 +116,7 @@ def update_user(
     # Update fields
     if user_data.email is not None:
         # Check email uniqueness
-        existing = db.scalar(select(User).where(User.email == user_data.email, User.id != user_id))
+        existing = db.scalar(select(User).where(User.email == user_data.email, User.id != user.id))
         if existing:
             raise HTTPException(status_code=400, detail='Email already exists')
         user.email = user_data.email
@@ -140,6 +145,20 @@ def update_user(
     db.commit()
     
     return user
+
+@router.put('/{user_id}', response_model=UserResponse)
+def update_user(
+    user_id: int,
+    user_data: UserUpdate,
+    db: Session = Depends(get_session),
+    admin: dict = Depends(require_admin)
+):
+    """Update user details (admin only)"""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    return _apply_user_update(user, user_data, db, admin)
 
 @router.delete('/{user_id}')
 def delete_user(

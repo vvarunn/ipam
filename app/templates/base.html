@@ -68,6 +68,11 @@
                     <span class="tooltip">Settings</span>
                 </a>
                 {% endif %}
+                <a href="/about" class="icon-sidebar-link {% if request.path == '/about' %}active{% endif %}"
+                    title="About">
+                    ℹ️
+                    <span class="tooltip">About</span>
+                </a>
                 <button id="themeToggle" class="icon-sidebar-link" onclick="toggleTheme()" aria-label="Toggle theme"
                     title="Toggle theme" style="border: none; cursor: pointer; background: none;">
                     🌙

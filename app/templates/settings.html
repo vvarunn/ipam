@@ -364,6 +364,39 @@
     </div>
 </div>
 
+<!-- Change Role Modal -->
+<div id="changeRoleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Change User Role</h3>
+            <span class="close" onclick="closeChangeRoleModal()">&times;</span>
+        </div>
+        <div class="form-modern">
+            <p style="margin-bottom: var(--space-4);">Changing role for: <strong id="changeRoleTargetUsername"></strong></p>
+            <input type="hidden" id="changeRoleTargetUserId">
+            <div class="form-group">
+                <label class="form-label">Role</label>
+                <div style="display: flex; gap: var(--space-4); margin-top: var(--space-2);">
+                    <div style="display: flex; align-items: center; gap: var(--space-2);">
+                        <input type="radio" id="editRoleUser" name="editRole" value="user">
+                        <label for="editRoleUser">Standard User</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-2);">
+                        <input type="radio" id="editRoleReadonly" name="editRole" value="readonly">
+                        <label for="editRoleReadonly">Read-Only</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-2);">
+                        <input type="radio" id="editRoleAdmin" name="editRole" value="admin">
+                        <label for="editRoleAdmin">Admin</label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="changeUserRole()">Save Role</button>
+            <div id="changeRoleMessage" style="margin-top: var(--space-4);"></div>
+        </div>
+    </div>
+</div>
+
 <!-- Reset Password Modal -->
 <div id="resetPasswordModal" class="modal">
     <div class="modal-content">
@@ -418,6 +451,7 @@
                     <td><span class="badge ${user.is_admin ? 'badge-primary' : (user.is_readonly ? 'badge-info' : 'badge-secondary')}">${user.is_admin ? 'Admin' : (user.is_readonly ? 'Read-Only' : 'User')}</span></td>
                     <td><span class="badge ${user.is_active ? 'badge-success' : 'badge-danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
                     <td>
+                        <button class="btn btn-sm btn-primary" onclick="openChangeRoleModal(${user.id}, '${user.username}', ${user.is_admin}, ${user.is_readonly})" style="margin-right: 4px;">Change Role</button>
                         <button class="btn btn-sm btn-secondary" onclick="openResetPasswordModal(${user.id}, '${user.username}')" style="margin-right: 4px;">Reset Key</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${user.username}')">Delete</button>
                     </td>
@@ -480,6 +514,53 @@
             loadUsers();
         } catch (error) {
             alert('Error deleting user');
+        }
+    }
+
+    function openChangeRoleModal(id, username, isAdmin, isReadonly) {
+        document.getElementById('changeRoleTargetUserId').value = id;
+        document.getElementById('changeRoleTargetUsername').innerText = username;
+        document.getElementById('changeRoleMessage').innerHTML = '';
+
+        // Pre-select current role
+        if (isAdmin) {
+            document.getElementById('editRoleAdmin').checked = true;
+        } else if (isReadonly) {
+            document.getElementById('editRoleReadonly').checked = true;
+        } else {
+            document.getElementById('editRoleUser').checked = true;
+        }
+
+        document.getElementById('changeRoleModal').style.display = 'block';
+    }
+
+    function closeChangeRoleModal() {
+        document.getElementById('changeRoleModal').style.display = 'none';
+        document.getElementById('changeRoleMessage').innerHTML = '';
+    }
+
+    async function changeUserRole() {
+        const id = document.getElementById('changeRoleTargetUserId').value;
+        const selectedRole = document.querySelector('input[name="editRole"]:checked').value;
+        const isAdmin = selectedRole === 'admin';
+        const isReadonly = selectedRole === 'readonly';
+
+        try {
+            const response = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_admin: isAdmin, is_readonly: isReadonly })
+            });
+
+            if (response.ok) {
+                closeChangeRoleModal();
+                loadUsers();
+            } else {
+                const data = await response.json();
+                document.getElementById('changeRoleMessage').innerHTML = `<span style="color: var(--danger);">${data.detail || 'Error updating role'}</span>`;
+            }
+        } catch (error) {
+            document.getElementById('changeRoleMessage').innerHTML = `<span style="color: var(--danger);">${error.message}</span>`;
         }
     }
 

@@ -139,6 +139,13 @@ def settings_page(request: Request):
         
     return templates.TemplateResponse('settings.html', {'request': request, 'user': user, 'is_admin': True})
 
+@app.get('/about', response_class=HTMLResponse)
+def about_page(request: Request):
+    user = request.session.get('user')
+    if not user:
+        return RedirectResponse(url='/')
+    return templates.TemplateResponse('about.html', {'request': request, 'user': user, 'is_admin': is_admin(user)})
+
 @app.get('/api/health')
 def health_check():
     return {'status': 'ok', 'version': __version__}
