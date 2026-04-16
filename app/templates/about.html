@@ -39,20 +39,16 @@
         width: 80px;
         height: 80px;
         margin: 0 auto var(--space-4);
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        border-radius: var(--radius-xl);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 36px;
-        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
-        animation: logoPulse 3s ease-in-out infinite;
     }
 
     .about-logo img {
-        width: 48px;
-        height: 48px;
-        filter: brightness(0) invert(1);
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
     }
 
     @keyframes logoPulse {
@@ -64,20 +60,8 @@
         font-size: 1.75rem;
         font-weight: 800;
         color: var(--text-primary);
-        margin-bottom: var(--space-1);
-        letter-spacing: -0.5px;
-    }
-
-    .about-version {
-        display: inline-block;
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: #fff;
-        font-size: 0.8rem;
-        font-weight: 600;
-        padding: 3px 12px;
-        border-radius: 999px;
         margin-bottom: var(--space-6);
-        letter-spacing: 0.5px;
+        letter-spacing: -0.5px;
     }
 
     .about-divider {
@@ -159,7 +143,6 @@
         </div>
 
         <div class="about-app-name">IP Hub</div>
-        <div class="about-version">v{{ app_version }}</div>
 
         <div class="about-divider"></div>
 
