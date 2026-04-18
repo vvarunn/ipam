@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="/static/css/modern.css?v=3">
+    <link rel="stylesheet" href="/static/css/modern.css?v=4">
     <link rel="icon" type="image/png" href="/static/images/favicon.png">
     {% block extra_css %}{% endblock %}
 
@@ -23,67 +23,68 @@
 <body>
     {% block navigation %}
     <div class="app-layout">
-        <!-- Icon Sidebar -->
+        <!-- Sidebar -->
         <aside class="icon-sidebar">
             <div class="icon-sidebar-logo">
-                <img src="/static/images/logo.png" alt="IPAM" onerror="this.outerHTML='✦'">
+                <img src="/static/images/logo.png" alt="IPAM" onerror="this.outerHTML='<svg width=&quot;24&quot; height=&quot;24&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot;><circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;10&quot;/><path d=&quot;M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z&quot;/><line x1=&quot;2&quot; y1=&quot;12&quot; x2=&quot;22&quot; y2=&quot;12&quot;/></svg>'">
             </div>
+
             <nav class="icon-sidebar-nav">
                 <a href="/" class="icon-sidebar-link {% if request.path == '/' %}active{% endif %}" title="Dashboard">
-                    🏠
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                     <span class="tooltip">Dashboard</span>
                 </a>
-                <a href="/search" class="icon-sidebar-link {% if request.path == '/search' %}active{% endif %}"
-                    title="Search">
-                    🔍
+                <a href="/search" class="icon-sidebar-link {% if request.path == '/search' %}active{% endif %}" title="Search">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <span class="tooltip">Search</span>
                 </a>
-                <a href="/vlans" class="icon-sidebar-link {% if request.path == '/vlans' %}active{% endif %}"
-                    title="VLANs">
-                    📡
+                <a href="/vlans" class="icon-sidebar-link {% if request.path == '/vlans' %}active{% endif %}" title="VLANs">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
                     <span class="tooltip">VLANs</span>
                 </a>
-                <a href="/public-ips" class="icon-sidebar-link {% if request.path == '/public-ips' %}active{% endif %}"
-                    title="Public IPs">
-                    🌐
+                <a href="/public-ips" class="icon-sidebar-link {% if request.path == '/public-ips' %}active{% endif %}" title="Public IPs">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     <span class="tooltip">Public IPs</span>
                 </a>
+
                 {% if is_admin %}
-                <a href="/bulk" class="icon-sidebar-link {% if request.path == '/bulk' %}active{% endif %}"
-                    title="Bulk Import">
-                    📥
+                <div class="sidebar-divider"></div>
+                <a href="/bulk" class="icon-sidebar-link {% if request.path == '/bulk' %}active{% endif %}" title="Bulk Import">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     <span class="tooltip">Bulk Import</span>
                 </a>
+                <a href="/export" class="icon-sidebar-link {% if request.path == '/export' %}active{% endif %}" title="Export">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span class="tooltip">Export</span>
+                </a>
                 <a href="/docs" class="icon-sidebar-link" title="API Docs">
-                    📖
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     <span class="tooltip">API Docs</span>
                 </a>
                 {% endif %}
             </nav>
+
             <div class="icon-sidebar-bottom">
                 {% if is_admin %}
-                <a href="/settings" class="icon-sidebar-link {% if request.path == '/settings' %}active{% endif %}"
-                    title="Settings">
-                    ⚙️
+                <a href="/settings" class="icon-sidebar-link {% if request.path == '/settings' %}active{% endif %}" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     <span class="tooltip">Settings</span>
                 </a>
                 {% endif %}
-                <a href="/about" class="icon-sidebar-link {% if request.path == '/about' %}active{% endif %}"
-                    title="About">
-                    ℹ️
+                <a href="/about" class="icon-sidebar-link {% if request.path == '/about' %}active{% endif %}" title="About">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                     <span class="tooltip">About</span>
                 </a>
-                <button id="themeToggle" class="icon-sidebar-link" onclick="toggleTheme()" aria-label="Toggle theme"
-                    title="Toggle theme" style="border: none; cursor: pointer; background: none;">
-                    🌙
+                <button id="themeToggle" class="icon-sidebar-link" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                     <span class="tooltip">Toggle Theme</span>
                 </button>
+                <div class="sidebar-divider"></div>
                 <a href="/auth/logout" class="icon-sidebar-link" title="Logout">
-                    🚪
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     <span class="tooltip">Logout</span>
                 </a>
-                <div style="font-size: 10px; color: var(--text-tertiary); margin-top: var(--space-2); user-select: none;"
-                    title="Application Version">
+                <div class="sidebar-version" title="Application Version">
                     v{{ app_version }}
                 </div>
             </div>

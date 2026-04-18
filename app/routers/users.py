@@ -20,12 +20,37 @@ class UserCreate(BaseModel):
     is_admin: bool = False
     is_readonly: bool = False
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
+                "username": "john.doe",
+                "email": "john.doe@example.com",
+                "password": "securepassword",
+                "full_name": "John Doe",
+                "is_admin": False,
+                "is_readonly": False
+            }]
+        }
+    }
+
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
     is_admin: Optional[bool] = None
     is_readonly: Optional[bool] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
+                "email": "john.doe@example.com",
+                "full_name": "John Doe",
+                "is_active": True,
+                "is_admin": False,
+                "is_readonly": False
+            }]
+        }
+    }
 
 class UserPasswordUpdate(BaseModel):
     password: str
@@ -145,6 +170,50 @@ def _apply_user_update(user: User, user_data: UserUpdate, db: Session, admin: di
     db.commit()
     
     return user
+
+@router.delete('/by-username/{username}')
+def delete_user_by_username(
+    username: str,
+    db: Session = Depends(get_session),
+    admin: dict = Depends(require_admin)
+):
+    """Delete a user by username (admin only). Useful for SSO users."""
+    user = db.scalar(select(User).where(User.username == username))
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    # Prevent deleting yourself
+    if user.username == admin.get('username'):
+        raise HTTPException(status_code=400, detail='Cannot delete your own account')
+    
+    audit(db, admin.get('username', 'admin'), 'DELETE_USER', 'user', user.id, {
+        'username': user.username
+    }, None)
+    
+    db.delete(user)
+    db.commit()
+    
+    return {'ok': True, 'message': f'User {user.username} deleted'}
+
+@router.put('/by-username/{username}/password')
+def reset_password_by_username(
+    username: str,
+    password_data: UserPasswordUpdate,
+    db: Session = Depends(get_session),
+    admin: dict = Depends(require_admin)
+):
+    """Reset user password by username (admin only). Useful for SSO users."""
+    user = db.scalar(select(User).where(User.username == username))
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    user.hashed_password = hash_password(password_data.password)
+    
+    audit(db, admin.get('username', 'admin'), 'RESET_PASSWORD', 'user', user.id, None, None)
+    
+    db.commit()
+    
+    return {'ok': True, 'message': f'Password reset for user {user.username}'}
 
 @router.put('/{user_id}', response_model=UserResponse)
 def update_user(

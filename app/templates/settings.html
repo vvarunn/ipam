@@ -443,7 +443,10 @@
             const users = await response.json();
             const tbody = document.getElementById('userTableBody');
 
-            tbody.innerHTML = users.map(user => `
+            tbody.innerHTML = users.map(user => {
+                // Escape username for use in JS string attributes
+                const safeUsername = user.username.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                return `
                 <tr>
                     <td><strong>${user.username}</strong></td>
                     <td>${user.full_name || '-'}</td>
@@ -451,12 +454,13 @@
                     <td><span class="badge ${user.is_admin ? 'badge-primary' : (user.is_readonly ? 'badge-info' : 'badge-secondary')}">${user.is_admin ? 'Admin' : (user.is_readonly ? 'Read-Only' : 'User')}</span></td>
                     <td><span class="badge ${user.is_active ? 'badge-success' : 'badge-danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="openChangeRoleModal(${user.id}, '${user.username}', ${user.is_admin}, ${user.is_readonly})" style="margin-right: 4px;">Change Role</button>
-                        <button class="btn btn-sm btn-secondary" onclick="openResetPasswordModal(${user.id}, '${user.username}')" style="margin-right: 4px;">Reset Key</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${user.username}')">Delete</button>
+                        <button class="btn btn-sm btn-primary" onclick="openChangeRoleModal('${safeUsername}', ${user.is_admin}, ${user.is_readonly})" style="margin-right: 4px;">Change Role</button>
+                        <button class="btn btn-sm btn-secondary" onclick="openResetPasswordModal('${safeUsername}')" style="margin-right: 4px;">Reset Key</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser('${safeUsername}')">Delete</button>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         } catch (error) {
             console.error(error);
         }
@@ -506,19 +510,19 @@
         }
     }
 
-    async function deleteUser(id, username) {
+    async function deleteUser(username) {
         if (!confirm(`Are you sure you want to delete user ${username}?`)) return;
 
         try {
-            await fetch(`/api/users/${id}`, { method: 'DELETE' });
+            await fetch(`/api/users/by-username/${encodeURIComponent(username)}`, { method: 'DELETE' });
             loadUsers();
         } catch (error) {
             alert('Error deleting user');
         }
     }
 
-    function openChangeRoleModal(id, username, isAdmin, isReadonly) {
-        document.getElementById('changeRoleTargetUserId').value = id;
+    function openChangeRoleModal(username, isAdmin, isReadonly) {
+        document.getElementById('changeRoleTargetUserId').value = username;
         document.getElementById('changeRoleTargetUsername').innerText = username;
         document.getElementById('changeRoleMessage').innerHTML = '';
 
@@ -540,13 +544,13 @@
     }
 
     async function changeUserRole() {
-        const id = document.getElementById('changeRoleTargetUserId').value;
+        const username = document.getElementById('changeRoleTargetUserId').value;
         const selectedRole = document.querySelector('input[name="editRole"]:checked').value;
         const isAdmin = selectedRole === 'admin';
         const isReadonly = selectedRole === 'readonly';
 
         try {
-            const response = await fetch(`/api/users/${id}`, {
+            const response = await fetch(`/api/users/by-username/${encodeURIComponent(username)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_admin: isAdmin, is_readonly: isReadonly })
@@ -564,8 +568,8 @@
         }
     }
 
-    function openResetPasswordModal(id, username) {
-        document.getElementById('resetTargetUserId').value = id;
+    function openResetPasswordModal(username) {
+        document.getElementById('resetTargetUserId').value = username;
         document.getElementById('resetTargetUsername').innerText = username;
         document.getElementById('resetNewPassword').value = '';
         document.getElementById('resetPasswordModal').style.display = 'block';
@@ -577,7 +581,7 @@
     }
 
     async function resetUserPassword() {
-        const id = document.getElementById('resetTargetUserId').value;
+        const username = document.getElementById('resetTargetUserId').value;
         const password = document.getElementById('resetNewPassword').value;
 
         if (!password) {
@@ -586,7 +590,7 @@
         }
 
         try {
-            const response = await fetch(`/api/users/${id}/password`, {
+            const response = await fetch(`/api/users/by-username/${encodeURIComponent(username)}/password`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password })

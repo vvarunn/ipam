@@ -49,7 +49,10 @@ def ensure_admin_user(db: Session, username: str, password: str, email: str | No
             password = password[:72]
             
         existing.hashed_password = hash_password(password)
-        if email and not existing.email:
+        # Always sync full_name and email from env to fix stale/incorrect data
+        if not existing.full_name or existing.full_name in ('string', ''):
+            existing.full_name = 'Administrator'
+        if email:
             existing.email = email
         existing.is_admin = True
         db.commit()

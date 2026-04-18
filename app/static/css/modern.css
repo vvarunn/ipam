@@ -120,7 +120,7 @@
   --border-medium: var(--gray-500);
   --border-dark: var(--gray-400);
 
-  --sidebar-bg: var(--gray-700);
+  --sidebar-bg: var(--gray-950);
 
   --table-bg-header: var(--gray-600);
   --table-bg-hover: var(--gray-600);
@@ -223,46 +223,46 @@ a:hover {
   min-height: 100vh;
 }
 
-/* Icon Sidebar (narrow dark bar) */
+/* Icon Sidebar */
 .icon-sidebar {
   width: var(--sidebar-width);
   background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-4) 0;
+  padding: var(--space-5) 0 var(--space-4);
   position: fixed;
   top: 0;
   left: 0;
   height: 100vh;
   z-index: 1000;
-  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .icon-sidebar-logo {
-  width: 36px;
-  height: 36px;
-  margin-bottom: var(--space-8);
+  width: 34px;
+  height: 34px;
+  margin-bottom: var(--space-6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
   color: var(--white);
-  font-weight: 800;
 }
 
 .icon-sidebar-logo img {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-md);
 }
 
 .icon-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-1);
   flex: 1;
   align-items: center;
+  width: 100%;
+  padding: 0 10px;
 }
 
 .icon-sidebar-link {
@@ -271,52 +271,107 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   color: var(--sidebar-icon);
-  font-size: 18px;
   transition: all var(--transition-fast);
   text-decoration: none;
   position: relative;
+  border: none;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+
+.icon-sidebar-link svg {
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
 }
 
 .icon-sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--sidebar-icon-active);
 }
 
+.icon-sidebar-link:hover svg {
+  transform: scale(1.08);
+}
+
 .icon-sidebar-link.active {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
   color: var(--sidebar-icon-active);
+  box-shadow: inset 3px 0 0 var(--white);
 }
 
 .icon-sidebar-link .tooltip {
   display: none;
   position: absolute;
-  left: calc(100% + 12px);
+  left: calc(100% + 14px);
   top: 50%;
   transform: translateY(-50%);
-  background: var(--gray-800);
-  color: var(--white);
+  background: var(--gray-900);
+  color: var(--gray-100);
   padding: 6px 12px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.2px;
   white-space: nowrap;
   z-index: 1001;
   pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.icon-sidebar-link .tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: var(--gray-900);
 }
 
 .icon-sidebar-link:hover .tooltip {
   display: block;
+  animation: tooltipFadeIn 0.15s ease;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.sidebar-divider {
+  width: 24px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: var(--space-2) 0;
 }
 
 .icon-sidebar-bottom {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-1);
   align-items: center;
-  padding-bottom: var(--space-4);
+  width: 100%;
+  padding: 0 10px;
+}
+
+.sidebar-version {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.25);
+  margin-top: var(--space-2);
+  user-select: none;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 /* Main Content Area */
@@ -1267,11 +1322,21 @@ a:hover {
   }
 
   .icon-sidebar {
-    width: 48px;
+    width: 50px;
+  }
+
+  .icon-sidebar-link {
+    width: 34px;
+    height: 34px;
+  }
+
+  .icon-sidebar-link svg {
+    width: 18px;
+    height: 18px;
   }
 
   .main-content {
-    margin-left: 48px;
+    margin-left: 50px;
   }
 }
 
