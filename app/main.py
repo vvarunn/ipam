@@ -61,6 +61,8 @@ def startup():
     try:
         # Lightweight schema migration
         db.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_readonly BOOLEAN NOT NULL DEFAULT FALSE;'))
+        db.execute(text('ALTER TABLE ip_assignment ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);'))
+        db.execute(text('ALTER TABLE ip_assignment ADD COLUMN IF NOT EXISTS app_name VARCHAR(255);'))
         db.commit()
     except Exception as e:
         db.rollback()

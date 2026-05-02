@@ -65,6 +65,14 @@
           <input type="text" class="form-input" id="newHostname" placeholder="e.g., web-server-01">
         </div>
         <div class="form-group">
+          <label class="form-label">Owner Name</label>
+          <input type="text" class="form-input" id="newOwnerName" placeholder="e.g., John Doe">
+        </div>
+        <div class="form-group">
+          <label class="form-label">App Name</label>
+          <input type="text" class="form-input" id="newAppName" placeholder="e.g., CRM Portal">
+        </div>
+        <div class="form-group">
           <label class="form-label">Status</label>
           <select class="form-select" id="newStatus">
             <option value="allocated">Allocated</option>
@@ -123,6 +131,8 @@
             <th>VLAN</th>
             <th>Status</th>
             <th>Hostname</th>
+            <th>Owner</th>
+            <th>App</th>
             <th>Notes</th>
             {% if is_admin %}<th>Actions</th>{% endif %}
           </tr>
@@ -141,6 +151,12 @@
               </span>
             </td>
             <td>{{ assign.hostname if assign else '' }}</td>
+            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ assign.owner_name if assign else '' }}
+            </td>
+            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ assign.app_name if assign else '' }}
+            </td>
             <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               {{ assign.notes if assign else '' }}
             </td>
@@ -148,11 +164,11 @@
             <td>
               <div class="table-actions">
                 <button class="btn btn-sm btn-secondary"
-                  onclick="editIP({{ ip_obj.id }}, '{{ ip_obj.ip }}', '{{ assign.hostname if assign else '' }}', '{{ assign.notes if assign else '' }}', '{{ ip_obj.status }}')">
+                  onclick="editIP({{ ip_obj.id }}, '{{ ip_obj.ip }}', '{{ assign.hostname if assign else '' }}', '{{ assign.owner_name if assign else '' }}', '{{ assign.app_name if assign else '' }}', '{{ assign.notes if assign else '' }}', '{{ ip_obj.status }}')">  
                   ✏️ Edit
                 </button>
                 <button class="btn btn-sm btn-danger"
-                  onclick="deleteIP({{ ip_obj.id }}, '{{ ip_obj.ip }}', '{{ assign.hostname if assign else 'No hostname' }}')">
+                  onclick="deleteIP({{ ip_obj.id }}, '{{ ip_obj.ip }}', '{{ assign.hostname if assign else 'No hostname' }}')">  
                   🗑️ Delete
                 </button>
               </div>
@@ -162,7 +178,7 @@
           {% endfor %}
           {% else %}
           <tr>
-            <td colspan="{% if is_admin %}7{% else %}6{% endif %}" style="text-align: center; padding: var(--space-8);">
+            <td colspan="{% if is_admin %}9{% else %}8{% endif %}" style="text-align: center; padding: var(--space-8);">
               <div style="font-size: 48px; margin-bottom: var(--space-4); opacity: 0.3;">🔍</div>
               <p style="color: var(--text-secondary);">No results found. Try a different search query.</p>
             </td>
@@ -189,6 +205,14 @@
       <div class="form-group">
         <label class="form-label">Hostname</label>
         <input type="text" class="form-input" id="editHostname">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Owner Name</label>
+        <input type="text" class="form-input" id="editOwnerName" placeholder="Owner's full name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">App Name</label>
+        <input type="text" class="form-input" id="editAppName" placeholder="Application name">
       </div>
       <div class="form-group">
         <label class="form-label">Status</label>
@@ -236,6 +260,8 @@
   async function addIP() {
     const ip = document.getElementById('newIp').value.trim();
     const hostname = document.getElementById('newHostname').value.trim();
+    const ownerName = document.getElementById('newOwnerName').value.trim();
+    const appName = document.getElementById('newAppName').value.trim();
     const notes = document.getElementById('newNotes').value.trim();
     const status = document.getElementById('newStatus').value;
 
@@ -251,6 +277,8 @@
         body: JSON.stringify({
           ip: ip,
           hostname: hostname || null,
+          owner_name: ownerName || null,
+          app_name: appName || null,
           notes: notes || null,
           status: status
         })
@@ -262,6 +290,8 @@
         showMessage('addMessage', '✓ IP address added successfully!', 'success');
         document.getElementById('newIp').value = '';
         document.getElementById('newHostname').value = '';
+        document.getElementById('newOwnerName').value = '';
+        document.getElementById('newAppName').value = '';
         document.getElementById('newNotes').value = '';
         document.getElementById('newStatus').value = 'allocated';
         setTimeout(() => window.location.reload(), 1000);
@@ -273,10 +303,12 @@
     }
   }
 
-  function editIP(ipId, ip, hostname, notes, status) {
+  function editIP(ipId, ip, hostname, ownerName, appName, notes, status) {
     currentIpId = ipId;
     document.getElementById('editIp').value = ip;
     document.getElementById('editHostname').value = hostname;
+    document.getElementById('editOwnerName').value = ownerName;
+    document.getElementById('editAppName').value = appName;
     document.getElementById('editNotes').value = notes;
     document.getElementById('editStatus').value = status;
     document.getElementById('editModal').style.display = 'block';
@@ -292,6 +324,8 @@
     if (!currentIpId) return;
 
     const hostname = document.getElementById('editHostname').value.trim();
+    const ownerName = document.getElementById('editOwnerName').value.trim();
+    const appName = document.getElementById('editAppName').value.trim();
     const notes = document.getElementById('editNotes').value.trim();
     const status = document.getElementById('editStatus').value;
 
@@ -301,6 +335,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hostname: hostname || null,
+          owner_name: ownerName || null,
+          app_name: appName || null,
           notes: notes || null,
           status: status
         })

@@ -40,6 +40,8 @@ class IPAssignment(Base):
     ip_id = Column(Integer, ForeignKey('ip_address.id', ondelete='CASCADE'), nullable=False)
     hostname = Column(String(255))
     label = Column(String(50))
+    owner_name = Column(String(255))
+    app_name = Column(String(255))
     notes = Column(String)
     is_active = Column(Boolean, nullable=False, default=True)
     updated_by = Column(String(100))

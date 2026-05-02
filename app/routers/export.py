@@ -18,12 +18,15 @@ def export(q: str = '', site: str | None = None, vlan_id: int | None = None, sta
     rows = search(db, q=q, site_code=site, vlan_id=vlan_id, status=status)
 
     data = []
-    for ip_obj, assign in rows:
+    for ip_obj, assign, site_obj, vlan_obj in rows:
         data.append({
             'ip': str(ip_obj.ip),
+            'site': site_obj.code if site_obj else None,
+            'vlan': vlan_obj.name if vlan_obj else None,
             'status': ip_obj.status,
-            'vlan_ref': ip_obj.vlan_ref,
             'hostname': assign.hostname if assign else None,
+            'owner_name': assign.owner_name if assign else None,
+            'app_name': assign.app_name if assign else None,
             'label': assign.label if assign else None,
             'notes': assign.notes if assign else None,
             'assignment_updated_at': assign.updated_at.isoformat() if assign else None,

@@ -25,6 +25,8 @@ def api_search(q: str = '', site: str | None = None, vlan_id: int | None = None,
             'vlan_name': vlan_obj.name if vlan_obj else None,
             'hostname': assign.hostname if assign else None,
             'label': assign.label if assign else None,
+            'owner_name': assign.owner_name if assign else None,
+            'app_name': assign.app_name if assign else None,
             'notes': assign.notes if assign else None,
             'assignment_updated_at': assign.updated_at.isoformat() if assign else None,
         }
@@ -45,6 +47,8 @@ def api_create_ip(payload: IPCreate, db: Session = Depends(get_session), user=De
             notes=payload.notes,
             status=payload.status,
             vlan_numeric=payload.vlan_id,
+            owner_name=payload.owner_name,
+            app_name=payload.app_name,
         )
         return {'ip_id': ip_id}
     except ValueError as e:
@@ -64,6 +68,8 @@ def api_update_hostname(ip_id: int, payload: HostnameUpdate, db: Session = Depen
             notes=payload.notes,
             status=payload.status,
             vlan_numeric=payload.vlan_id,
+            owner_name=payload.owner_name,
+            app_name=payload.app_name,
         )
         return {'assignment_id': assign_id}
     except ValueError as e:

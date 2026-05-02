@@ -35,6 +35,8 @@ async def bulk_upsert(file: UploadFile = File(...), db: Session = Depends(get_se
             ip = str(row['ip']).strip()
             hostname = str(row.get('hostname') or '').strip() or None
             label = str(row.get('label') or '').strip() or None
+            owner_name = str(row.get('owner_name') or '').strip() or None
+            app_name = str(row.get('app_name') or '').strip() or None
             notes = str(row.get('notes') or '').strip() or None
             status = str(row.get('status') or '').strip() or None
 
@@ -44,11 +46,13 @@ async def bulk_upsert(file: UploadFile = File(...), db: Session = Depends(get_se
             existing = db.scalar(select(IPAddress).where(IPAddress.ip == ip))
             if not existing:
                 create_ip_with_assignment(db, ip=ip, hostname=hostname, actor=actor, label=label, notes=notes,
-                                          status=status or 'allocated', vlan_numeric=vlan_id)
+                                          status=status or 'allocated', vlan_numeric=vlan_id,
+                                          owner_name=owner_name, app_name=app_name)
                 results['created'] += 1
             else:
                 update_ip_hostname(db, ip_id=existing.id, actor=actor, hostname=hostname, label=label, notes=notes,
-                                   status=status, vlan_numeric=vlan_id)
+                                   status=status, vlan_numeric=vlan_id,
+                                   owner_name=owner_name, app_name=app_name)
                 results['updated'] += 1
 
         except Exception as e:

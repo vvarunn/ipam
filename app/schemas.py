@@ -5,6 +5,8 @@ class IPCreate(BaseModel):
     ip: str
     hostname: Optional[str] = None
     label: Optional[str] = None
+    owner_name: Optional[str] = None
+    app_name: Optional[str] = None
     notes: Optional[str] = None
     status: str = 'allocated'
     vlan_id: Optional[int] = None
@@ -13,6 +15,8 @@ class IPCreate(BaseModel):
 class HostnameUpdate(BaseModel):
     hostname: Optional[str] = None
     label: Optional[str] = None
+    owner_name: Optional[str] = None
+    app_name: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
     vlan_id: Optional[int] = None

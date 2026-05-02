@@ -274,7 +274,7 @@ def trigger_app_update(
     # Create or clear the status file before starting
     try:
         with open(get_status_file_path(), 'w') as f:
-            f.write("Initializing update sequence...\\n")
+            f.write("Initializing update sequence...")
     except Exception:
         pass
         

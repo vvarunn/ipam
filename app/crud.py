@@ -91,7 +91,8 @@ def search(db: Session, q: str = '', site_code: str | None = None, vlan_id: int 
 
 
 def create_ip_with_assignment(db: Session, ip: str, hostname: str | None, actor: str, label: str | None = None,
-                              notes: str | None = None, status: str = 'allocated', vlan_numeric: int | None = None):
+                              notes: str | None = None, status: str = 'allocated', vlan_numeric: int | None = None,
+                              owner_name: str | None = None, app_name: str | None = None):
     site_code = infer_site_code(ip)
     site_id = get_site_id(db, site_code)
 
@@ -106,8 +107,10 @@ def create_ip_with_assignment(db: Session, ip: str, hostname: str | None, actor:
     db.add(ip_obj)
     db.flush()
 
-    if hostname or label or notes:
-        db.add(IPAssignment(ip_id=ip_obj.id, hostname=hostname, label=label, notes=notes, is_active=True, updated_by=actor))
+    if hostname or label or notes or owner_name or app_name:
+        db.add(IPAssignment(ip_id=ip_obj.id, hostname=hostname, label=label, notes=notes,
+                            owner_name=owner_name, app_name=app_name,
+                            is_active=True, updated_by=actor))
 
     audit(db, actor, 'CREATE_IP', 'ip_address', ip_obj.id, None, {'ip': ip, 'site': site_code, 'vlan_ref': vlan_ref, 'status': status})
     db.commit()
@@ -115,7 +118,8 @@ def create_ip_with_assignment(db: Session, ip: str, hostname: str | None, actor:
 
 
 def update_ip_hostname(db: Session, ip_id: int, actor: str, hostname: str | None = None, label: str | None = None,
-                       notes: str | None = None, status: str | None = None, vlan_numeric: int | None = None):
+                       notes: str | None = None, status: str | None = None, vlan_numeric: int | None = None,
+                       owner_name: str | None = None, app_name: str | None = None):
     ip_obj = db.get(IPAddress, ip_id)
     if not ip_obj:
         raise ValueError('IP not found')
@@ -131,15 +135,19 @@ def update_ip_hostname(db: Session, ip_id: int, actor: str, hostname: str | None
     current = db.scalar(select(IPAssignment).where(IPAssignment.ip_id == ip_id, IPAssignment.is_active == True))
     old_assign = None
     if current:
-        old_assign = {'hostname': current.hostname, 'label': current.label, 'notes': current.notes}
+        old_assign = {'hostname': current.hostname, 'label': current.label, 'notes': current.notes,
+                      'owner_name': current.owner_name, 'app_name': current.app_name}
         current.is_active = False
 
-    new_assign = IPAssignment(ip_id=ip_id, hostname=hostname, label=label, notes=notes, is_active=True, updated_by=actor)
+    new_assign = IPAssignment(ip_id=ip_id, hostname=hostname, label=label, notes=notes,
+                              owner_name=owner_name, app_name=app_name,
+                              is_active=True, updated_by=actor)
     db.add(new_assign)
     db.flush()
 
     audit(db, actor, 'UPDATE_IP', 'ip_address', ip_id, old_ip, {'status': ip_obj.status, 'vlan_ref': ip_obj.vlan_ref})
-    audit(db, actor, 'UPDATE_HOSTNAME', 'ip_assignment', new_assign.id, old_assign, {'hostname': hostname, 'label': label, 'notes': notes})
+    audit(db, actor, 'UPDATE_HOSTNAME', 'ip_assignment', new_assign.id, old_assign,
+          {'hostname': hostname, 'label': label, 'notes': notes, 'owner_name': owner_name, 'app_name': app_name})
     db.commit()
     return new_assign.id
 
