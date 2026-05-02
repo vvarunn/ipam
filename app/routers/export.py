@@ -12,10 +12,15 @@ from ..crud import search, audit
 
 router = APIRouter(prefix='/api/export', tags=['export'])
 
+@router.get('')
 @router.get('/')
-def export(q: str = '', site: str | None = None, vlan_id: int | None = None, status: str | None = None, fmt: str = 'csv',
+def export(q: str = '', site: str = '', vlan_id: str = '', status: str = '', fmt: str = 'csv',
            db: Session = Depends(get_session), user=Depends(require_user)):
-    rows = search(db, q=q, site_code=site, vlan_id=vlan_id, status=status)
+    # Coerce empty strings (sent by HTML forms) to the correct types
+    site_val = site.strip() or None
+    vlan_id_val = int(vlan_id.strip()) if vlan_id.strip() else None
+    status_val = status.strip() or None
+    rows = search(db, q=q, site_code=site_val, vlan_id=vlan_id_val, status=status_val)
 
     data = []
     for ip_obj, assign, site_obj, vlan_obj in rows:
@@ -34,7 +39,7 @@ def export(q: str = '', site: str | None = None, vlan_id: int | None = None, sta
 
     df = pd.DataFrame(data)
     actor = actor_from_user(user)
-    audit(db, actor, 'EXPORT', 'ip_address', None, None, {'fmt': fmt, 'site': site, 'q': q, 'vlan_id': vlan_id, 'status': status, 'rows': len(df)})
+    audit(db, actor, 'EXPORT', 'ip_address', None, None, {'fmt': fmt, 'site': site_val, 'q': q, 'vlan_id': vlan_id_val, 'status': status_val, 'rows': len(df)})
     db.commit()
 
     if fmt.lower() == 'xlsx':
